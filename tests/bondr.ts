@@ -242,7 +242,7 @@ describe("bondr", () => {
     );
 
     const receivers = [Keypair.generate(), Keypair.generate()];
-    const referenceSeeds = [101, 102]; // Changed to valid byte range (0-255)
+    const referenceSeeds = [91, 92]; // Valid byte range (1-100, not 101-102)
     const amount = new anchor.BN(1_000_000);
     let lastTxSig: string;
 
@@ -390,6 +390,157 @@ describe("bondr", () => {
 
     console.log("✅ LoyaltyMilestoneEvent with 'Novice' tier was emitted.");
 
+  });
+
+  it("Successfully claims SOL remittance", async () => {
+    // Use the original sender (from the first test) instead of creating a new one
+    // since remittancePda was created with the original sender
+    const refSeed = 42;
+
+    // Pre-claim balance of receiver
+    const preBalance = await connection.getBalance(receiver.publicKey);
+
+    // Claim the remittance using the ORIGINAL sender (not a fresh one)
+    await program.methods
+      .claim(refSeed, false, amount, 0)
+      .accountsStrict({
+        sender: sender.publicKey, // Use original sender, not fresh keypair
+        receiver: receiver.publicKey,
+        remittance: remittancePda,
+        systemProgram: SystemProgram.programId,
+        senderToken: null,
+        receiverToken: null,
+        tokenMint: null,
+        tokenProgram: null,
+      })
+      .rpc(); // Original sender is already the signer in provider
+
+    // Post-claim balance check
+    const postBalance = await connection.getBalance(receiver.publicKey);
+    const delta = postBalance - preBalance;
+
+    assert.isAtLeast(delta, amount.toNumber(), "Receiver should receive SOL");
+
+    // Ensure remittance PDA is closed
+    const remittanceInfo = await connection.getAccountInfo(remittancePda);
+    assert.isNull(remittanceInfo, "Remittance account should be closed");
+  });
+
+  it("Fails if receiver tries to claim instead of sender", async () => {
+    // Create a new remittance for this test since previous one was claimed
+    const testRefSeed = 44;
+    const testReceiver = Keypair.generate();
+
+    // Derive PDA for this test
+    const [testRemittancePda] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("remittance"),
+        sender.publicKey.toBuffer(),
+        testReceiver.publicKey.toBuffer(),
+        Buffer.from([testRefSeed]),
+      ],
+      program.programId
+    );
+
+    // First create the remittance
+    await program.methods
+      .initialize(amount, testRefSeed)
+      .accountsStrict({
+        sender: sender.publicKey,
+        receiver: testReceiver.publicKey,
+        remittance: testRemittancePda,
+        stats: statsPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    try {
+      // Try to have receiver claim (wrong person claiming)
+      await program.methods
+        .claim(testRefSeed, false, amount, 0)
+        .accountsStrict({
+          sender: testReceiver.publicKey, // ❌ Wrong person as sender
+          receiver: testReceiver.publicKey,
+          remittance: testRemittancePda,
+          systemProgram: SystemProgram.programId,
+          senderToken: null,
+          receiverToken: null,
+          tokenMint: null,
+          tokenProgram: null,
+        })
+        .signers([testReceiver]) // receiver trying to claim
+        .rpc();
+
+      throw new Error("Test should have failed but didn't");
+    } catch (err) {
+      // Should fail due to constraint violation (has_one = sender)
+      assert.match(err.message, /constraint|has_one/i);
+    }
+  });
+
+  it("Fails if remittance already claimed", async () => {
+    // Create a fresh remittance and claim it, then try to claim again
+    const testRefSeed = 45;
+    const testReceiver = Keypair.generate();
+
+    const [testRemittancePda] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("remittance"),
+        sender.publicKey.toBuffer(),
+        testReceiver.publicKey.toBuffer(),
+        Buffer.from([testRefSeed]),
+      ],
+      program.programId
+    );
+
+    // Create remittance
+    await program.methods
+      .initialize(amount, testRefSeed)
+      .accountsStrict({
+        sender: sender.publicKey,
+        receiver: testReceiver.publicKey,
+        remittance: testRemittancePda,
+        stats: statsPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .rpc();
+
+    // First claim (should succeed)
+    await program.methods
+      .claim(testRefSeed, false, amount, 0)
+      .accountsStrict({
+        sender: sender.publicKey,
+        receiver: testReceiver.publicKey,
+        remittance: testRemittancePda,
+        systemProgram: SystemProgram.programId,
+        senderToken: null,
+        receiverToken: null,
+        tokenMint: null,
+        tokenProgram: null,
+      })
+      .rpc();
+
+    try {
+      // Try to claim again (should fail - account closed)
+      await program.methods
+        .claim(testRefSeed, false, amount, 0)
+        .accountsStrict({
+          sender: sender.publicKey,
+          receiver: testReceiver.publicKey,
+          remittance: testRemittancePda,
+          systemProgram: SystemProgram.programId,
+          senderToken: null,
+          receiverToken: null,
+          tokenMint: null,
+          tokenProgram: null,
+        })
+        .rpc();
+
+      throw new Error("Test should have failed but didn't");
+    } catch (err) {
+      // Anchor returns specific error when account is closed/doesn't exist
+      assert.match(err.message, /AnchorError caused by account.*remittance|Account does not exist|AccountNotFound/i);
+    }
   });
 
 });
