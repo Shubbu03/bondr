@@ -3,6 +3,13 @@ import { Program } from "@coral-xyz/anchor";
 import { Bondr } from "../target/types/bondr";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { assert } from "chai";
+import {
+  createMint,
+  createAssociatedTokenAccount,
+  getAccount,
+  mintTo,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 
 describe("bondr", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -540,6 +547,364 @@ describe("bondr", () => {
     } catch (err) {
       // Anchor returns specific error when account is closed/doesn't exist
       assert.match(err.message, /AnchorError caused by account.*remittance|Account does not exist|AccountNotFound/i);
+    }
+  });
+
+  it("Successfully claims SPL token remittance", async () => {
+    // Create a keypair for SPL operations (SPL functions need Keypair, not Wallet)
+    const tokenSender = Keypair.generate();
+    await connection.requestAirdrop(tokenSender.publicKey, 2_000_000_000);
+    await new Promise(r => setTimeout(r, 3000));
+
+    const tokenAmount = new anchor.BN(1_000_000); // 1 token (6 decimals)
+    const tokenDecimals = 6;
+    const refSeed = 77;
+
+    // 1️⃣ Create SPL token mint
+    const tokenMint = await createMint(
+      connection,
+      tokenSender, // Use keypair instead of wallet
+      tokenSender.publicKey, // mint authority
+      null, // freeze authority
+      tokenDecimals
+    );
+
+    // 2️⃣ Create sender and receiver ATAs
+    const senderTokenAta = await createAssociatedTokenAccount(
+      connection,
+      tokenSender, // payer
+      tokenMint,
+      tokenSender.publicKey // owner
+    );
+
+    const receiverTokenAta = await createAssociatedTokenAccount(
+      connection,
+      tokenSender, // payer
+      tokenMint,
+      receiver.publicKey // owner
+    );
+
+    // 3️⃣ Mint tokens to sender
+    await mintTo(
+      connection,
+      tokenSender, // payer
+      tokenMint,
+      senderTokenAta,
+      tokenSender, // mint authority
+      tokenAmount.toNumber()
+    );
+
+    // 4️⃣ Derive fresh stats PDA for token sender
+    const [tokenStatsPda] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("remit_stats"),
+        tokenSender.publicKey.toBuffer(),
+      ],
+      program.programId
+    );
+
+    // 5️⃣ Derive remittance PDA
+    const [remittancePda] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("remittance"),
+        tokenSender.publicKey.toBuffer(),
+        receiver.publicKey.toBuffer(),
+        Buffer.from([refSeed]),
+      ],
+      program.programId
+    );
+
+    // 6️⃣ Initialize remittance
+    await program.methods
+      .initialize(tokenAmount, refSeed)
+      .accountsStrict({
+        sender: tokenSender.publicKey,
+        receiver: receiver.publicKey,
+        remittance: remittancePda,
+        stats: tokenStatsPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([tokenSender]) // Use keypair
+      .rpc();
+
+    // 7️⃣ Execute token claim (is_token_transfer = true)
+    await program.methods
+      .claim(refSeed, true, tokenAmount, tokenDecimals)
+      .accountsStrict({
+        sender: tokenSender.publicKey,
+        receiver: receiver.publicKey,
+        remittance: remittancePda,
+        systemProgram: SystemProgram.programId,
+        senderToken: senderTokenAta,
+        receiverToken: receiverTokenAta,
+        tokenMint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([tokenSender]) // Use keypair
+      .rpc();
+
+    // ✅ 8️⃣ Validate token transfer
+    const receiverTokenAccount = await getAccount(connection, receiverTokenAta);
+    assert.strictEqual(
+      Number(receiverTokenAccount.amount),
+      tokenAmount.toNumber(),
+      "Receiver should receive SPL tokens"
+    );
+
+    // Verify remittance PDA is closed
+    const remittanceInfo = await connection.getAccountInfo(remittancePda);
+    assert.isNull(remittanceInfo, "Remittance account should be closed");
+  });
+
+  it("Fails if sender has insufficient SPL token balance", async () => {
+    const refSeed = 88;
+    const lowSender = Keypair.generate();
+
+    const [remitPda] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("remittance"),
+        lowSender.publicKey.toBuffer(),
+        receiver.publicKey.toBuffer(),
+        Buffer.from([refSeed]),
+      ],
+      program.programId
+    );
+
+    const [statsPda] = await PublicKey.findProgramAddress(
+      [Buffer.from("remit_stats"), lowSender.publicKey.toBuffer()],
+      program.programId
+    );
+
+    // Airdrop SOL for fees
+    await connection.requestAirdrop(lowSender.publicKey, 1_000_000_000);
+    await new Promise(res => setTimeout(res, 3000));
+
+    // Create token mint and ATAs
+    const mint = await createMint(connection, lowSender, lowSender.publicKey, null, 6);
+
+    // Create ATAs (but don't mint any tokens to sender)
+    const lowSenderToken = await createAssociatedTokenAccount(
+      connection,
+      lowSender,
+      mint,
+      lowSender.publicKey
+    );
+    const recvToken = await createAssociatedTokenAccount(
+      connection,
+      lowSender, // payer
+      mint,
+      receiver.publicKey // owner
+    );
+
+    // Initialize remittance
+    await program.methods
+      .initialize(amount, refSeed)
+      .accountsStrict({
+        sender: lowSender.publicKey,
+        receiver: receiver.publicKey,
+        remittance: remitPda,
+        stats: statsPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([lowSender])
+      .rpc();
+
+    // Attempt claim (should fail - sender has 0 tokens)
+    try {
+      await program.methods
+        .claim(refSeed, true, amount, 6)
+        .accountsStrict({
+          sender: lowSender.publicKey,
+          receiver: receiver.publicKey,
+          remittance: remitPda,
+          systemProgram: SystemProgram.programId,
+          senderToken: lowSenderToken,
+          receiverToken: recvToken,
+          tokenMint: mint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([lowSender])
+        .rpc();
+      throw new Error("Should have failed due to insufficient tokens");
+    } catch (err) {
+      assert.match(err.message, /insufficient funds|Program failed to complete/i);
+    }
+  });
+
+  it("Fails if receiver token account is incorrect", async () => {
+    const refSeed = 89;
+    const testSender = Keypair.generate();
+
+    // Airdrop for fees  
+    await connection.requestAirdrop(testSender.publicKey, 1_000_000_000);
+    await new Promise(res => setTimeout(res, 3000));
+
+    // Create fresh token mint for this test
+    const testMint = await createMint(connection, testSender, testSender.publicKey, null, 6);
+
+    // Create sender's token account with tokens
+    const senderTokenAta = await createAssociatedTokenAccount(
+      connection,
+      testSender,
+      testMint,
+      testSender.publicKey
+    );
+
+    // Mint tokens to sender
+    await mintTo(
+      connection,
+      testSender,
+      testMint,
+      senderTokenAta,
+      testSender,
+      amount.toNumber()
+    );
+
+    // Create a DIFFERENT mint and receiver ATA (wrong mint for receiver)
+    const wrongMint = await createMint(connection, testSender, testSender.publicKey, null, 6);
+    const wrongReceiverToken = await createAssociatedTokenAccount(
+      connection,
+      testSender,
+      wrongMint,        // ❌ different mint (not testMint)
+      receiver.publicKey  // ✅ correct owner, but wrong mint
+    );
+
+    // Derive PDAs
+    const [wrongRemitPda] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("remittance"),
+        testSender.publicKey.toBuffer(),
+        receiver.publicKey.toBuffer(),
+        Buffer.from([refSeed]),
+      ],
+      program.programId
+    );
+
+    const [testStatsPda] = await PublicKey.findProgramAddress(
+      [Buffer.from("remit_stats"), testSender.publicKey.toBuffer()],
+      program.programId
+    );
+
+    // Initialize remittance
+    await program.methods
+      .initialize(amount, refSeed)
+      .accountsStrict({
+        sender: testSender.publicKey,
+        receiver: receiver.publicKey,
+        remittance: wrongRemitPda,
+        stats: testStatsPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([testSender])
+      .rpc();
+
+    // Attempt to claim using wrong receiver token account
+    try {
+      await program.methods
+        .claim(refSeed, true, amount, 6)
+        .accountsStrict({
+          sender: testSender.publicKey,
+          receiver: receiver.publicKey,
+          remittance: wrongRemitPda,
+          systemProgram: SystemProgram.programId,
+          senderToken: senderTokenAta,
+          receiverToken: wrongReceiverToken, // ❌ wrong ATA (owned by sender, not receiver)
+          tokenMint: testMint,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([testSender])
+        .rpc();
+      throw new Error("Should have failed due to invalid receiver ATA");
+    } catch (err) {
+      assert.match(err.message, /failed to transfer|Invalid account|constraint|token account|Simulation failed/i);
+    }
+  });
+
+  it("Fails if wrong token mint is passed", async () => {
+    const refSeed = 90;
+    const testSender = Keypair.generate();
+
+    // Airdrop for fees
+    await connection.requestAirdrop(testSender.publicKey, 1_000_000_000);
+    await new Promise(res => setTimeout(res, 3000));
+
+    // Create TWO different mints
+    const correctMint = await createMint(connection, testSender, testSender.publicKey, null, 6);
+    const wrongMint = await createMint(connection, testSender, testSender.publicKey, null, 6);
+
+    // Create token accounts for CORRECT mint
+    const senderCorrectAta = await createAssociatedTokenAccount(
+      connection,
+      testSender,
+      correctMint,
+      testSender.publicKey
+    );
+
+    const receiverCorrectAta = await createAssociatedTokenAccount(
+      connection,
+      testSender,
+      correctMint,
+      receiver.publicKey
+    );
+
+    // Mint tokens to sender's CORRECT account
+    await mintTo(
+      connection,
+      testSender,
+      correctMint,
+      senderCorrectAta,
+      testSender,
+      amount.toNumber()
+    );
+
+    // Derive PDAs
+    const [badRemitPda] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("remittance"),
+        testSender.publicKey.toBuffer(),
+        receiver.publicKey.toBuffer(),
+        Buffer.from([refSeed]),
+      ],
+      program.programId
+    );
+
+    const [testStatsPda] = await PublicKey.findProgramAddress(
+      [Buffer.from("remit_stats"), testSender.publicKey.toBuffer()],
+      program.programId
+    );
+
+    // Initialize remittance
+    await program.methods
+      .initialize(amount, refSeed)
+      .accountsStrict({
+        sender: testSender.publicKey,
+        receiver: receiver.publicKey,
+        remittance: badRemitPda,
+        stats: testStatsPda,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([testSender])
+      .rpc();
+
+    try {
+      // Use correct token accounts but WRONG mint
+      await program.methods
+        .claim(refSeed, true, amount, 6)
+        .accountsStrict({
+          sender: testSender.publicKey,
+          receiver: receiver.publicKey,
+          remittance: badRemitPda,
+          systemProgram: SystemProgram.programId,
+          senderToken: senderCorrectAta,    // ✅ correct ATA
+          receiverToken: receiverCorrectAta, // ✅ correct ATA  
+          tokenMint: wrongMint,              // ❌ wrong mint!
+          tokenProgram: TOKEN_PROGRAM_ID,
+        })
+        .signers([testSender])
+        .rpc();
+      throw new Error("Should have failed due to wrong token mint");
+    } catch (err) {
+      assert.match(err.message, /failed to transfer|Invalid account|Simulation failed|constraint/i);
     }
   });
 
