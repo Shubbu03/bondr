@@ -399,6 +399,161 @@ describe("bondr", () => {
 
   });
 
+  it("Emits LoyaltyMilestoneEvent on 10th remittance (Expert tier)", async () => {
+    const expertSender = Keypair.generate();
+    const expertStatsPda = await PublicKey.findProgramAddress(
+      [Buffer.from("remit_stats"), expertSender.publicKey.toBuffer()],
+      program.programId
+    ).then(([addr]) => addr);
+
+    await connection.requestAirdrop(expertSender.publicKey, 5_000_000_000);
+    await new Promise(r => setTimeout(r, 3000));
+
+    const receivers: Keypair[] = [];
+    const referenceSeeds: number[] = [];
+    const amount = new anchor.BN(1000000);
+    let lastTxSig: string;
+
+    for (let i = 0; i < 10; i++) {
+      const receiver = Keypair.generate();
+      receivers.push(receiver);
+      referenceSeeds.push(60 + i); // All under 100
+
+      const [remitPda] = await PublicKey.findProgramAddress(
+        [
+          Buffer.from("remittance"),
+          expertSender.publicKey.toBuffer(),
+          receiver.publicKey.toBuffer(),
+          Buffer.from([referenceSeeds[i]]),
+        ],
+        program.programId
+      );
+
+      lastTxSig = await program.methods
+        .initialize(amount, referenceSeeds[i])
+        .accountsStrict({
+          sender: expertSender.publicKey,
+          receiver: receiver.publicKey,
+          remittance: remitPda,
+          stats: expertStatsPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([expertSender])
+        .rpc();
+    }
+
+    // Wait for transaction to be fully confirmed
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Verify tx_count is exactly 10
+    const statsAccount = await program.account.remitStats.fetch(expertStatsPda);
+    assert.strictEqual(statsAccount.txCount.toNumber(), 10, "tx_count should be exactly 10");
+
+    const tx = await connection.getTransaction(lastTxSig, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+
+    const logs = tx?.meta?.logMessages || [];
+
+    console.log("\n📋 Expert Test - Full Log Output (should contain LoyaltyMilestoneEvent):");
+    logs.forEach((log) => console.log(log));
+
+    // Check for any sign of the loyalty event
+    const hasEventLog = logs.some((log) =>
+      log.toLowerCase().includes("loyaltymilestoneevent")
+    );
+
+    if (!hasEventLog) {
+      throw new Error("❌ LoyaltyMilestoneEvent was NOT found in logs.");
+    }
+
+    // Check for specific tier
+    const hasExpertTier = logs.some((log) => log.includes("Expert"));
+
+    if (!hasExpertTier) {
+      throw new Error("❌ 'Expert' tier not found in logs. Logs may contain event, but incorrect tier.");
+    }
+
+    console.log("✅ LoyaltyMilestoneEvent with 'Expert' tier was emitted.");
+  });
+
+  it("Emits LoyaltyMilestoneEvent on 25th remittance (Elite tier)", async () => {
+    const eliteSender = Keypair.generate();
+    const [eliteStatsPda] = await PublicKey.findProgramAddress(
+      [Buffer.from("remit_stats"), eliteSender.publicKey.toBuffer()],
+      program.programId
+    );
+
+    await connection.requestAirdrop(eliteSender.publicKey, 10_000_000_000);
+    await new Promise((r) => setTimeout(r, 3000));
+
+    const txAmount = new anchor.BN(1_000_000);
+    let lastTxSig: string;
+
+    for (let i = 0; i < 25; i++) {
+      const receiver = Keypair.generate();
+      const refSeed = 1 + (i % 100); // Cycle through 1-100 to stay within valid range
+
+      const [remitPda] = await PublicKey.findProgramAddress(
+        [
+          Buffer.from("remittance"),
+          eliteSender.publicKey.toBuffer(),
+          receiver.publicKey.toBuffer(),
+          Buffer.from([refSeed]),
+        ],
+        program.programId
+      );
+
+      lastTxSig = await program.methods
+        .initialize(txAmount, refSeed)
+        .accountsStrict({
+          sender: eliteSender.publicKey,
+          receiver: receiver.publicKey,
+          remittance: remitPda,
+          stats: eliteStatsPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .signers([eliteSender])
+        .rpc();
+    }
+
+    // Wait for transaction to be fully confirmed
+    await new Promise(r => setTimeout(r, 2000));
+
+    // Verify tx_count is exactly 25
+    const statsAccount = await program.account.remitStats.fetch(eliteStatsPda);
+    assert.strictEqual(statsAccount.txCount.toNumber(), 25, "tx_count should be exactly 25");
+
+    const tx = await connection.getTransaction(lastTxSig, {
+      commitment: "confirmed",
+      maxSupportedTransactionVersion: 0,
+    });
+
+    const logs = tx?.meta?.logMessages || [];
+
+    console.log("\n📋 Elite Test - Full Log Output (should contain LoyaltyMilestoneEvent):");
+    logs.forEach((log) => console.log(log));
+
+    // Check for any sign of the loyalty event
+    const hasEventLog = logs.some((log) =>
+      log.toLowerCase().includes("loyaltymilestoneevent")
+    );
+
+    if (!hasEventLog) {
+      throw new Error("❌ LoyaltyMilestoneEvent was NOT found in logs.");
+    }
+
+    // Check for specific tier
+    const hasEliteTier = logs.some((log) => log.includes("Elite"));
+
+    if (!hasEliteTier) {
+      throw new Error("❌ 'Elite' tier not found in logs. Logs may contain event, but incorrect tier.");
+    }
+
+    console.log("✅ LoyaltyMilestoneEvent with 'Elite' tier was emitted.");
+  });
+
   it("Successfully claims SOL remittance", async () => {
     // Use the original sender (from the first test) instead of creating a new one
     // since remittancePda was created with the original sender
