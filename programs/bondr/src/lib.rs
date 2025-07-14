@@ -20,7 +20,10 @@ pub mod bondr {
     pub fn initialize(ctx: Context<Initialize>, amount: u64, reference_seed: u8) -> Result<()> {
         let stats_bump = ctx.bumps.stats;
         ctx.accounts
-            .init_remittance(amount, reference_seed, ctx.bumps.remittance, stats_bump)?;
-        Ok(())
+            .init_remittance(amount, reference_seed, ctx.bumps.remittance, stats_bump)
+    }
+
+    pub fn claim(ctx: Context<Claim>,reference_seed: u8,is_token_transfer: bool, amount: u64,decimals: u8) -> Result<()> {
+        ctx.accounts.claim(is_token_transfer,amount,decimals)
     }
 }
