@@ -44,6 +44,18 @@ impl<'info> Initialize<'info> {
         stats_bump: u8,
     ) -> Result<()> {
         require!(amount > 0, BondrError::InvalidAmountZero);
+        //max amount check(1000 SOL)
+        require!(amount <= 1_000_000_000_000, BondrError::AmountTooLarge);
+        //preventing self transfer
+        require!(
+            self.sender.key() != self.receiver.key(),
+            BondrError::SelfTransfer
+        );
+        //for protecting PDA from spam and collision
+        require!(
+            reference_seed != 0 && reference_seed <= 100,
+            BondrError::InvalidReferenceSeed
+        );
 
         self.remittance.set_inner(Remittance {
             sender: self.sender.key(),
