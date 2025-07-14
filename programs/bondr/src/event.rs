@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+use crate::LoyaltyTier;
+
 #[event]
 pub struct RemittanceEvent {
     pub sender: Pubkey,
@@ -11,5 +13,5 @@ pub struct RemittanceEvent {
 #[event]
 pub struct LoyaltyMilestoneEvent {
     pub user: Pubkey,
-    pub tier: String,
+    pub tier: LoyaltyTier,
 }

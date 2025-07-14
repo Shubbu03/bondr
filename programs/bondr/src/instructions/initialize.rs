@@ -1,4 +1,6 @@
-use crate::{error::BondrError, LoyaltyMilestoneEvent, RemitStats, Remittance, RemittanceEvent};
+use crate::{
+    error::BondrError, LoyaltyMilestoneEvent, LoyaltyTier, RemitStats, Remittance, RemittanceEvent,
+};
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
@@ -83,7 +85,7 @@ impl<'info> Initialize<'info> {
             3 => {
                 emit!(LoyaltyMilestoneEvent {
                     user: self.sender.key(),
-                    tier: "Novice".into(),
+                    tier: LoyaltyTier::Novice,
                 });
                 msg!(
                     "LoyaltyMilestoneEvent: user={}, tier=Novice",
@@ -93,7 +95,7 @@ impl<'info> Initialize<'info> {
             10 => {
                 emit!(LoyaltyMilestoneEvent {
                     user: self.sender.key(),
-                    tier: "Expert".into(),
+                    tier: LoyaltyTier::Expert,
                 });
                 msg!(
                     "LoyaltyMilestoneEvent: user={}, tier=Expert",
@@ -103,7 +105,7 @@ impl<'info> Initialize<'info> {
             25 => {
                 emit!(LoyaltyMilestoneEvent {
                     user: self.sender.key(),
-                    tier: "Elite".into(),
+                    tier: LoyaltyTier::Elite,
                 });
                 msg!(
                     "LoyaltyMilestoneEvent: user={}, tier=Elite",
