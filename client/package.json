@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
+    "@hookform/resolvers": "^5.1.1",
     "@metaplex-foundation/js": "^0.20.1",
+    "@solana/pay": "^0.2.5",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-ledger": "^0.9.29",
     "@solana/wallet-adapter-phantom": "^0.9.28",
@@ -20,11 +22,14 @@
     "@solana/wallet-adapter-torus": "^0.11.32",
     "@solana/wallet-adapter-wallets": "^0.19.37",
     "@solana/web3.js": "^1.98.2",
+    "framer-motion": "^12.23.6",
     "lucide-react": "^0.525.0",
     "next": "15.4.1",
     "qrcode.react": "^4.2.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-hook-form": "^7.60.0",
+    "react-hot-toast": "^2.5.2",
     "zod": "^4.0.5"
   },
   "devDependencies": {
