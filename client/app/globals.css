@@ -1,12 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  /* Bondr Color Theme */
   --pistachio: #b2d98b;
   --eucalyptus: #1d665d;
   --black-glaze: #061611;
   
-  /* App Colors */
   --background: #ffffff;
   --foreground: var(--black-glaze);
   --primary: var(--eucalyptus);
