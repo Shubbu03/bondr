@@ -1,10 +1,10 @@
 "use client";
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Send, Wallet } from 'lucide-react';
 import { RemittanceFormData } from '@/types/remittance';
-import { PublicKey } from '@solana/web3.js';
 
 interface RemittanceFormProps {
     onSubmit: (data: RemittanceFormData) => void;
@@ -45,7 +45,9 @@ export const RemittanceForm: React.FC<RemittanceFormProps> = ({ onSubmit, isLoad
 
     const validateWallet = (value: string) => {
         if (value && value.trim()) {
-            if (validatePubkey(value) == false) {
+
+            const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+            if (!base58Regex.test(value)) {
                 return 'Please enter a valid Solana wallet address'
             }
 
@@ -56,15 +58,6 @@ export const RemittanceForm: React.FC<RemittanceFormProps> = ({ onSubmit, isLoad
         return true;
     };
 
-    const validatePubkey = (address: string) => {
-        try {
-            let pubkey = new PublicKey(address)
-            let isSolana = PublicKey.isOnCurve(pubkey.toBuffer())
-            return isSolana
-        } catch (error) {
-            return false
-        }
-    }
     const onFormSubmit = (data: RemittanceFormData) => {
         if (!connected) return;
         onSubmit(data);
@@ -90,7 +83,6 @@ export const RemittanceForm: React.FC<RemittanceFormProps> = ({ onSubmit, isLoad
             </div>
 
             <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6">
-                {/* Amount Input */}
                 <div>
                     <label htmlFor="amount" className="block text-sm font-medium text-black-glaze dark:text-white mb-2">
                         Amount *
@@ -127,7 +119,6 @@ export const RemittanceForm: React.FC<RemittanceFormProps> = ({ onSubmit, isLoad
                     )}
                 </div>
 
-                {/* Receiver Wallet Input */}
                 <div>
                     <label htmlFor="receiverWallet" className="block text-sm font-medium text-black-glaze dark:text-white mb-2">
                         Receiver Wallet (optional)
@@ -139,7 +130,7 @@ export const RemittanceForm: React.FC<RemittanceFormProps> = ({ onSubmit, isLoad
                             validate: validateWallet
                         })}
                         placeholder="Enter Solana wallet address"
-                        className={`w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-eucalyptus/20 dark:focus:ring-eucalyptus/30 transition-colors ${errors.receiverWallet
+                        className={`w-full pl-4 pr-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-eucalyptus/20 dark:focus:ring-eucalyptus/30 transition-colors ${errors.receiverWallet
                             ? 'border-red-300 dark:border-red-500 bg-red-50 dark:bg-red-900/20'
                             : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 focus:border-eucalyptus dark:focus:border-eucalyptus'
                             } text-black-glaze dark:text-white placeholder-gray-400 dark:placeholder-gray-500`}
@@ -153,11 +144,10 @@ export const RemittanceForm: React.FC<RemittanceFormProps> = ({ onSubmit, isLoad
                     </p>
                 </div>
 
-                {/* Submit Button */}
                 <button
                     type="submit"
                     disabled={isLoading || !amount || !isValid}
-                    className="w-full bg-eucalyptus hover:bg-eucalyptus/90 dark:bg-eucalyptus dark:hover:bg-eucalyptus/80 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg hover:shadow-xl dark:shadow-eucalyptus/20"
+                    className="w-full bg-eucalyptus hover:bg-eucalyptus/90 dark:bg-eucalyptus dark:hover:bg-eucalyptus/80 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-lg hover:shadow-xl dark:shadow-eucalyptus/20 hover:cursor-pointer"
                 >
                     {isLoading ? (
                         <>
