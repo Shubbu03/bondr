@@ -1,0 +1,359 @@
+{
+  "address": "CFXd43mg9TDN5cSHgaUm5ahPSTvLTb9hw3XuASCVL4wh",
+  "metadata": {
+    "name": "bondr",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "claim",
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "sender",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "remittance"
+          ]
+        },
+        {
+          "name": "receiver",
+          "writable": true,
+          "relations": [
+            "remittance"
+          ]
+        },
+        {
+          "name": "remittance",
+          "writable": true
+        },
+        {
+          "name": "sender_token",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "receiver_token",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_mint",
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "optional": true,
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "reference_seed",
+          "type": "u8"
+        },
+        {
+          "name": "is_token_transfer",
+          "type": "bool"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "decimals",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "sender",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "receiver"
+        },
+        {
+          "name": "remittance",
+          "writable": true
+        },
+        {
+          "name": "stats",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  109,
+                  105,
+                  116,
+                  95,
+                  115,
+                  116,
+                  97,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "sender"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "reference_seed",
+          "type": "u8"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "RemitStats",
+      "discriminator": [
+        253,
+        99,
+        230,
+        41,
+        33,
+        56,
+        111,
+        225
+      ]
+    },
+    {
+      "name": "Remittance",
+      "discriminator": [
+        127,
+        110,
+        150,
+        128,
+        101,
+        124,
+        134,
+        31
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "LoyaltyMilestoneEvent",
+      "discriminator": [
+        209,
+        114,
+        61,
+        0,
+        237,
+        142,
+        184,
+        131
+      ]
+    },
+    {
+      "name": "RemittanceEvent",
+      "discriminator": [
+        174,
+        3,
+        121,
+        151,
+        250,
+        227,
+        101,
+        99
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidAmount",
+      "msg": "Invalid Amount"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidAmountZero",
+      "msg": "Amount can't be 0"
+    },
+    {
+      "code": 6002,
+      "name": "SelfTransfer",
+      "msg": "Can't send money to self"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidReferenceSeed",
+      "msg": "Invalid reference seed"
+    },
+    {
+      "code": 6004,
+      "name": "AmountTooLarge",
+      "msg": "Amount exceeds maximum limit"
+    },
+    {
+      "code": 6005,
+      "name": "InsufficientBalance",
+      "msg": "Insufficient balance"
+    },
+    {
+      "code": 6006,
+      "name": "MissingTokenAccounts",
+      "msg": "Missing token accounts"
+    }
+  ],
+  "types": [
+    {
+      "name": "LoyaltyMilestoneEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "tier",
+            "type": {
+              "defined": {
+                "name": "LoyaltyTier"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "LoyaltyTier",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Novice"
+          },
+          {
+            "name": "Expert"
+          },
+          {
+            "name": "Elite"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RemitStats",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_sent",
+            "type": "u64"
+          },
+          {
+            "name": "tx_count",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Remittance",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "sender",
+            "type": "pubkey"
+          },
+          {
+            "name": "receiver",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RemittanceEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "sender",
+            "type": "pubkey"
+          },
+          {
+            "name": "receiver",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "reference_seed",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}
