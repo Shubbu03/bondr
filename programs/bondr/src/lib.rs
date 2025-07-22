@@ -11,7 +11,7 @@ pub use event::*;
 use instructions::*;
 pub use state::*;
 
-declare_id!("6UxuwCfAsMhLMozd3cYr4vvZVQHS1eKiw8JtoBXLxLWp");
+declare_id!("CFXd43mg9TDN5cSHgaUm5ahPSTvLTb9hw3XuASCVL4wh");
 
 #[program]
 pub mod bondr {
@@ -23,7 +23,13 @@ pub mod bondr {
             .init_remittance(amount, reference_seed, ctx.bumps.remittance, stats_bump)
     }
 
-    pub fn claim(ctx: Context<Claim>,reference_seed: u8,is_token_transfer: bool, amount: u64,decimals: u8) -> Result<()> {
-        ctx.accounts.claim(is_token_transfer,amount,decimals)
+    pub fn claim(
+        ctx: Context<Claim>,
+        reference_seed: u8,
+        is_token_transfer: bool,
+        amount: u64,
+        decimals: u8,
+    ) -> Result<()> {
+        ctx.accounts.claim(is_token_transfer, amount, decimals)
     }
 }
