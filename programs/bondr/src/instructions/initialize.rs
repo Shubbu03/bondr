@@ -1,5 +1,5 @@
 use crate::{
-    error::BondrError, LoyaltyMilestoneEvent, LoyaltyTier, RemitStats, Remittance, RemittanceEvent,
+    error::BondrError, LoyaltyMilestoneEvent, LoyaltyTier, RemitStats, Escrow, RemittanceEvent,
 };
 use anchor_lang::prelude::*;
 
@@ -18,11 +18,11 @@ pub struct Initialize<'info> {
     #[account(
         init,
         payer = sender,
-        space = 8 + Remittance::INIT_SPACE,
+        space = 8 + Escrow::INIT_SPACE,
         seeds = [b"remittance", sender.key().as_ref(), receiver.key().as_ref(), &[reference_seed]],
         bump,
     )]
-    pub remittance: Account<'info, Remittance>,
+    pub remittance: Account<'info, Escrow>,
 
     #[account(
         init_if_needed,
@@ -38,7 +38,7 @@ pub struct Initialize<'info> {
 
 impl<'info> Initialize<'info> {
     // Main logic to populate remittance PDA
-    pub fn init_remittance(
+    pub fn init_escrow(
         &mut self,
         amount: u64,
         reference_seed: u8,
@@ -59,7 +59,7 @@ impl<'info> Initialize<'info> {
             BondrError::InvalidReferenceSeed
         );
 
-        self.remittance.set_inner(Remittance {
+        self.remittance.set_inner(Escrow {
             sender: self.sender.key(),
             receiver: self.receiver.key(),
             amount,

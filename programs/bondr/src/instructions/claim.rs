@@ -1,7 +1,7 @@
 use anchor_lang::{prelude::*, system_program::{transfer,Transfer}};
 use anchor_spl::token::{transfer_checked, TransferChecked, Token, TokenAccount, Mint};
 
-use crate::{error::BondrError, Remittance};
+use crate::{error::BondrError, Escrow};
 
 #[derive(Accounts)]
 #[instruction(reference_seed:u8)]
@@ -13,13 +13,13 @@ pub struct Claim<'info> {
 
     #[account(
         mut,
-        close = sender, 
+        close = sender,
         has_one = sender,
         has_one = receiver,
         seeds = [b"remittance", sender.key().as_ref(), receiver.key().as_ref(), &[reference_seed]],
         bump = remittance.bump
     )]
-    pub remittance: Account<'info, Remittance>,
+    pub remittance: Account<'info, Escrow>,
 
     #[account(mut)]
     pub sender_token: Option<Account<'info, TokenAccount>>,
@@ -47,7 +47,7 @@ impl<'info> Claim<'info> {
 
         let cpi_context = CpiContext::new(
             cpi_program,
-            cpi_accounts  
+            cpi_accounts
         );
 
         transfer(cpi_context,amount)?;
