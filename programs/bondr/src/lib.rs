@@ -20,7 +20,7 @@ pub mod bondr {
     pub fn initialize(ctx: Context<Initialize>, amount: u64, reference_seed: u8) -> Result<()> {
         let stats_bump = ctx.bumps.stats;
         ctx.accounts
-            .init_remittance(amount, reference_seed, ctx.bumps.remittance, stats_bump)
+            .init_escrow(amount, reference_seed, ctx.bumps.remittance, stats_bump)
     }
 
     pub fn claim(
