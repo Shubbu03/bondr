@@ -1,7 +1,9 @@
-pub mod loyalty_tier;
-pub mod remit_stats;
+pub mod reputation_tier;
+pub mod user_stats;
 pub mod escrow;
+pub mod freelancer_badge;
 
-pub use loyalty_tier::*;
-pub use remit_stats::*;
+pub use reputation_tier::*;
+pub use user_stats::*;
 pub use escrow::*;
+pub use freelancer_badge::*;

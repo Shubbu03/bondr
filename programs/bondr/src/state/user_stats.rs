@@ -4,6 +4,6 @@ use anchor_lang::prelude::*;
 #[derive(InitSpace)]
 pub struct UserStats {
     pub user: Pubkey,
-    pub completed_escrow: u64,
+    pub completed_escrows: u32,
     pub bump: u8,
 }
