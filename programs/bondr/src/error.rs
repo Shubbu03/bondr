@@ -16,4 +16,6 @@ pub enum BondrError {
     InsufficientBalance,
     #[msg("Missing token accounts")]
     MissingTokenAccounts,
+    #[msg("Missing token program")]
+    MissingTokenProgram,
 }

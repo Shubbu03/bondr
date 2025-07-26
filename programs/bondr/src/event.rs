@@ -1,17 +1,18 @@
 use anchor_lang::prelude::*;
 
-use crate::LoyaltyTier;
+use crate::ReputationTier;
 
 #[event]
-pub struct RemittanceEvent {
+pub struct EscrowCreateEvent {
     pub sender: Pubkey,
     pub receiver: Pubkey,
     pub amount: u64,
     pub reference_seed: u8,
+    pub is_token_transfer: bool,
 }
 
 #[event]
-pub struct LoyaltyMilestoneEvent {
+pub struct ReputationMilestoneEvent {
     pub user: Pubkey,
-    pub tier: LoyaltyTier,
+    pub tier: ReputationTier,
 }
