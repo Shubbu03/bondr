@@ -1,5 +1,5 @@
 pub mod claim;
-pub mod initialize;
+pub mod initialize_escrow;
 
 pub use claim::*;
-pub use initialize::*;
+pub use initialize_escrow::*;
