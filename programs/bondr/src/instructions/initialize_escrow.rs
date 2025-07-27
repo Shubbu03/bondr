@@ -1,11 +1,12 @@
-use crate::{error::BondrError, Escrow, EscrowCreateEvent, UserStats};
-use anchor_lang::{
-    prelude::*,
-    system_program::{transfer, Transfer},
+use crate::{
+    error::BondrError,
+    utils::{transfer_sol, transfer_spl_tokens, validate_token_accounts},
+    Escrow, EscrowCreateEvent, UserStats,
 };
+use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{transfer_checked, Mint, Token, TokenAccount, TransferChecked},
+    token::{Mint, Token, TokenAccount},
 };
 
 #[derive(Accounts)]
@@ -60,51 +61,6 @@ pub struct InitializeEscrow<'info> {
 }
 
 impl<'info> InitializeEscrow<'info> {
-    fn transfer_sol(&mut self, amount: u64) -> Result<()> {
-        let transfer_instruction = Transfer {
-            from: self.sender.to_account_info(),
-            to: self.escrow.to_account_info(),
-        };
-        let cpi_ctx = CpiContext::new(self.system_program.to_account_info(), transfer_instruction);
-
-        transfer(cpi_ctx, amount)?;
-
-        Ok(())
-    }
-
-    fn transfer_spl(&mut self, amount: u64) -> Result<()> {
-        let token_program = self
-            .token_program
-            .as_ref()
-            .ok_or(BondrError::MissingTokenProgram)?;
-        let sender_token_account = self
-            .sender_token_account
-            .as_ref()
-            .ok_or(BondrError::MissingTokenAccounts)?;
-        let escrow_token_account = self
-            .escrow_token_account
-            .as_ref()
-            .ok_or(BondrError::MissingTokenAccounts)?;
-        let token_mint = self
-            .token_mint
-            .as_ref()
-            .ok_or(BondrError::MissingTokenAccounts)?;
-
-        let cpi_accounts = TransferChecked {
-            from: sender_token_account.to_account_info(),
-            mint: token_mint.to_account_info(),
-            to: escrow_token_account.to_account_info(),
-            authority: self.sender.to_account_info(),
-        };
-        let cpi_program = token_program.to_account_info();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-
-        transfer_checked(cpi_ctx, amount, token_mint.decimals)?;
-
-        Ok(())
-    }
-
-    // Main logic to populate escrow PDA
     pub fn init_escrow(
         &mut self,
         amount: u64,
@@ -133,10 +89,32 @@ impl<'info> InitializeEscrow<'info> {
         });
 
         // 3. Transfer based on is_token_transfer flag
-        match is_token_transfer {
-            true => self.transfer_spl(amount)?,
-            false => self.transfer_sol(amount)?,
-        };
+        if is_token_transfer {
+            validate_token_accounts(
+                &self.token_program,
+                &self.sender_token_account,
+                &self.escrow_token_account,
+                &self.token_mint,
+            )?;
+
+            transfer_spl_tokens(
+                self.sender_token_account.as_ref().unwrap(),
+                self.escrow_token_account.as_ref().unwrap(),
+                self.token_mint.as_ref().unwrap(),
+                &self.sender.to_account_info(),
+                self.token_program.as_ref().unwrap(),
+                amount,
+                None, // No signer seeds needed for sender
+            )?;
+        } else {
+            transfer_sol(
+                &self.sender.to_account_info(),
+                &self.escrow.to_account_info(),
+                &self.system_program,
+                amount,
+                None, // No signer seeds needed for sender
+            )?;
+        }
 
         // 4. init user stats
         if self.sender_stats.user == Pubkey::default() {
