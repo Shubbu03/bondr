@@ -18,4 +18,10 @@ pub enum BondrError {
     MissingTokenAccounts,
     #[msg("Missing token program")]
     MissingTokenProgram,
+    #[msg("Unauthorised sender")]
+    UnauthorizedSender,
+    #[msg("Payment already released")]
+    AlreadyReleased,
+    #[msg("Payment not released yet")]
+    NotReleased,
 }
