@@ -46,4 +46,12 @@ pub mod bondr {
         ctx.accounts
             .claim_payment(reference_seed, is_token_transfer, ctx.bumps.receiver_stats)
     }
+
+    pub fn initialize_freelancer_badge(ctx: Context<InitializeFreelancerBadge>) -> Result<()> {
+        ctx.accounts.initialize_freelancer_badge(ctx.bumps.badge)
+    }
+
+    pub fn update_freelancer_badge(ctx: Context<UpdateFreelancerBadge>, amount: u64) -> Result<()> {
+        ctx.accounts.update_badge(amount)
+    }
 }
