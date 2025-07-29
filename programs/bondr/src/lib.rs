@@ -29,6 +29,7 @@ pub mod bondr {
             reference_seed,
             is_token_transfer,
             ctx.bumps.escrow,
+            ctx.bumps.vault,
             ctx.bumps.sender_stats,
         )
     }
@@ -39,10 +40,10 @@ pub mod bondr {
 
     pub fn claim_payment(
         ctx: Context<ClaimPayment>,
-        is_token_transfer: bool,
         reference_seed: u8,
+        is_token_transfer: bool,
     ) -> Result<()> {
         ctx.accounts
-            .claim_payment(is_token_transfer, reference_seed, ctx.bumps.receiver_stats)
+            .claim_payment(reference_seed, is_token_transfer, ctx.bumps.receiver_stats)
     }
 }

@@ -8,4 +8,5 @@ pub struct Escrow {
     pub amount: u64,
     pub is_released: bool,
     pub bump: u8,
+    pub vault_bump: u8,
 }

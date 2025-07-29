@@ -30,6 +30,14 @@ pub struct InitializeEscrow<'info> {
     )]
     pub escrow: Account<'info, Escrow>,
 
+    // Separate vault PDA for holding SOL funds
+    #[account(
+        mut,
+        seeds = [b"vault", sender.key().as_ref(), receiver.key().as_ref(), &[reference_seed]],
+        bump,
+    )]
+    pub vault: SystemAccount<'info>,
+
     #[account(
         init_if_needed,
         payer = sender,
@@ -67,6 +75,7 @@ impl<'info> InitializeEscrow<'info> {
         reference_seed: u8,
         is_token_transfer: bool,
         bump: u8,
+        vault_bump: u8,
         stats_bump: u8,
     ) -> Result<()> {
         // 1. Validate inputs
@@ -86,6 +95,7 @@ impl<'info> InitializeEscrow<'info> {
             amount,
             is_released: false,
             bump,
+            vault_bump,
         });
 
         // 3. Transfer based on is_token_transfer flag
@@ -109,7 +119,7 @@ impl<'info> InitializeEscrow<'info> {
         } else {
             transfer_sol(
                 &self.sender.to_account_info(),
-                &self.escrow.to_account_info(),
+                &self.vault.to_account_info(),
                 &self.system_program,
                 amount,
                 None, // No signer seeds needed for sender

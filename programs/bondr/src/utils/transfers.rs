@@ -1,6 +1,5 @@
 use anchor_lang::{
-    prelude::*,
-    system_program::{transfer, Transfer},
+    prelude::*, system_program::{transfer, Transfer}
 };
 use anchor_spl::token::{transfer_checked, Mint, Token, TokenAccount, TransferChecked};
 
