@@ -33,18 +33,16 @@ pub mod bondr {
         )
     }
 
-    pub fn release_payment(ctx: Context<ReleasePayment>) -> Result<()> {
-        ctx.accounts.release_payment()
+    pub fn release_payment(ctx: Context<ReleasePayment>, reference_seed: u8) -> Result<()> {
+        ctx.accounts.release_payment(reference_seed)
     }
 
     pub fn claim_payment(
         ctx: Context<ClaimPayment>,
         is_token_transfer: bool,
-        amount: u64,
-        decimals: u8,
         reference_seed: u8,
     ) -> Result<()> {
         ctx.accounts
-            .claim_payment(is_token_transfer, amount, decimals, reference_seed)
+            .claim_payment(is_token_transfer, reference_seed, ctx.bumps.receiver_stats)
     }
 }
