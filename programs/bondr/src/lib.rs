@@ -1,5 +1,6 @@
 #![allow(unexpected_cfgs, deprecated)]
 
+pub mod constants;
 pub mod error;
 pub mod event;
 pub mod instructions;
@@ -8,6 +9,7 @@ pub mod utils;
 
 use anchor_lang::prelude::*;
 
+pub use constants::*;
 pub use event::*;
 use instructions::*;
 pub use state::*;
