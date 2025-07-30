@@ -54,4 +54,8 @@ pub mod bondr {
     pub fn update_freelancer_badge(ctx: Context<UpdateFreelancerBadge>, amount: u64) -> Result<()> {
         ctx.accounts.update_badge(amount)
     }
+
+    pub fn mint_reputation_nft(ctx: Context<MintReputationNFT>) -> Result<()> {
+        ctx.accounts.mint_nft()
+    }
 }
