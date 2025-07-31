@@ -24,4 +24,8 @@ pub enum BondrError {
     AlreadyReleased,
     #[msg("Payment not released yet")]
     NotReleased,
+    #[msg("Insufficient escrows completed for NFT minting")]
+    InsufficientEscrows,
+    #[msg("NFT for this tier already minted")]
+    NFTAlreadyMinted,
 }
