@@ -25,14 +25,17 @@ impl<'info> UpdateFreelancerBadge<'info> {
         self.badge.completed_escrows += 1;
         self.badge.total_value_completed += value;
 
-        // 3. checking tier for nft minting
+        // 3. updating tier based on completed escrows
         let new_tier = match self.badge.completed_escrows {
-            0..=4 => ReputationTier::Verified,
-            5..=14 => ReputationTier::Professional,
-            _ => ReputationTier::Elite,
+            0..=2 => ReputationTier::Unranked,
+            3..=9 => ReputationTier::Verified,
+            10..=24 => ReputationTier::Professional,
+            25.. => ReputationTier::Elite,
         };
 
-        self.badge.tier = new_tier;
+        if self.badge.tier != new_tier {
+            self.badge.tier = new_tier;
+        }
 
         Ok(())
     }
