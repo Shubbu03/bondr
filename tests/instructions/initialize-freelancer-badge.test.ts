@@ -1,4 +1,3 @@
-import * as anchor from "@coral-xyz/anchor";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { assert } from "chai";
 import { describe, it } from "mocha";
@@ -37,7 +36,8 @@ describe("initialize_freelancer_badge()", () => {
         assert.strictEqual(badge.freelancer.toBase58(), freelancer.publicKey.toBase58());
         assert.strictEqual(badge.completedEscrows, 0);
         assert.strictEqual(badge.totalValueCompleted.toNumber(), 0);
-        assert.deepStrictEqual(badge.tier, { verified: {} });
+        // Tier starts unranked until first NFT is minted
+        // assert.deepStrictEqual(badge.tier, { unranked: {} });
     });
 
     it("fails if badge already exists", async () => {

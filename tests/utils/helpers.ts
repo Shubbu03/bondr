@@ -61,4 +61,17 @@ export const deriveFreelancerBadgePDA = async (freelancer: PublicKey): Promise<F
         program.programId
     );
     return { badgePda, badgeBump };
+};
+
+export interface BadgeAuthorityPDA {
+    authorityPda: PublicKey;
+    authorityBump: number;
+}
+
+export const deriveBadgeAuthorityPDA = async (): Promise<BadgeAuthorityPDA> => {
+    const [authorityPda, authorityBump] = await PublicKey.findProgramAddress(
+        [Buffer.from("badge_authority")],
+        program.programId
+    );
+    return { authorityPda, authorityBump };
 }; 

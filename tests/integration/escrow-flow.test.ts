@@ -33,7 +33,7 @@ describe("Complete Escrow Flow Integration", () => {
 
         let badge = await program.account.freelancerBadge.fetch(badgePda);
         assert.strictEqual(badge.completedEscrows, 0);
-        assert.deepStrictEqual(badge.tier, { verified: {} });
+        assert.deepStrictEqual(badge.tier, { unranked: {} });
 
         // 2. Initialize escrow
         await program.methods
@@ -109,7 +109,7 @@ describe("Complete Escrow Flow Integration", () => {
         badge = await program.account.freelancerBadge.fetch(badgePda);
         assert.strictEqual(badge.completedEscrows, 1);
         assert.strictEqual(badge.totalValueCompleted.toNumber(), amount.toNumber());
-        assert.deepStrictEqual(badge.tier, { verified: {} }); // Still verified at 1 escrow
+        assert.deepStrictEqual(badge.tier, { unranked: {} }); // Still verified at 1 escrow
     });
 
     it("should handle multiple escrows and tier progression", async () => {
@@ -129,7 +129,7 @@ describe("Complete Escrow Flow Integration", () => {
             .signers([freelancer])
             .rpc();
 
-        // Complete 5 escrows to reach Professional tier
+        // Complete 5 escrows to reach Verified tier (3-9 escrows = Verified)
         for (let i = 0; i < 5; i++) {
             const refSeed = 100 + i;
             const { escrowPda, vaultPda } = await deriveEscrowPDAs(client.publicKey, freelancer.publicKey, refSeed);
@@ -192,12 +192,135 @@ describe("Complete Escrow Flow Integration", () => {
                 .rpc();
         }
 
-        // Verify Professional tier reached
+        // Fetch the badge and verify completed escrows and tier logic after all claimPayment + updateFreelancerBadge calls
         const badge = await program.account.freelancerBadge.fetch(badgePda);
-        assert.strictEqual(badge.completedEscrows, 5);
-        assert.deepStrictEqual(badge.tier, { professional: {} });
 
-        const totalValue = amount.toNumber() * 5;
-        assert.strictEqual(badge.totalValueCompleted.toNumber(), totalValue);
+        // The completed_escrows counter should only increment after releasePayment + claimPayment + updateFreelancerBadge for each escrow
+        // Make sure this matches the number of actual completed escrows, not just escrow creations
+        assert.strictEqual(
+            badge.completedEscrows,
+            5,
+            "completedEscrows should reflect actual completed escrows (release+claim+update), not just escrow creations"
+        );
+
+        // Verified tier should be reached after 5 completed escrows (3-9 escrows = Verified)
+        assert.deepStrictEqual(
+            badge.tier,
+            { verified: {} },
+            "Badge tier should be Verified after 5 completed escrows"
+        );
+
+        // Total value completed should be the sum of all escrow amounts
+        const expectedTotalValue = amount.toNumber() * 5;
+        assert.strictEqual(
+            badge.totalValueCompleted.toNumber(),
+            expectedTotalValue,
+            "totalValueCompleted should equal the sum of all completed escrow amounts"
+        );
+    });
+
+    it("should reach Professional tier after 10 completed escrows", async () => {
+        const client = await createFundedKeypair();
+        const freelancer = await createFundedKeypair(1_000_000_000);
+        const amount = new anchor.BN(2_000_000);
+
+        // Initialize badge
+        const { badgePda } = await deriveFreelancerBadgePDA(freelancer.publicKey);
+        await program.methods
+            .initializeFreelancerBadge()
+            .accountsStrict({
+                freelancer: freelancer.publicKey,
+                badge: badgePda,
+                systemProgram: SystemProgram.programId,
+            })
+            .signers([freelancer])
+            .rpc();
+
+        // Complete 10 escrows to reach Professional tier (10-24 escrows = Professional)
+        for (let i = 0; i < 10; i++) {
+            const refSeed = 200 + i;
+            const { escrowPda, vaultPda } = await deriveEscrowPDAs(client.publicKey, freelancer.publicKey, refSeed);
+            const { statsPda: clientStatsPda } = await deriveUserStatsPDA(client.publicKey);
+            const { statsPda: freelancerStatsPda } = await deriveUserStatsPDA(freelancer.publicKey);
+
+            // Initialize → Release → Claim → Update Badge
+            await program.methods
+                .initializeEscrow(amount, refSeed, false)
+                .accountsPartial({
+                    sender: client.publicKey,
+                    receiver: freelancer.publicKey,
+                    escrow: escrowPda,
+                    vault: vaultPda,
+                    senderStats: clientStatsPda,
+                    systemProgram: SystemProgram.programId,
+                    tokenProgram: null,
+                    senderTokenAccount: null,
+                    escrowTokenAccount: null,
+                    tokenMint: null,
+                    associatedTokenProgram: null,
+                })
+                .signers([client])
+                .rpc();
+
+            await program.methods
+                .releasePayment(refSeed)
+                .accountsStrict({
+                    client: client.publicKey,
+                    escrow: escrowPda,
+                })
+                .signers([client])
+                .rpc();
+
+            await program.methods
+                .claimPayment(refSeed, false)
+                .accountsPartial({
+                    client: client.publicKey,
+                    freelancer: freelancer.publicKey,
+                    escrow: escrowPda,
+                    vault: vaultPda,
+                    receiverStats: freelancerStatsPda,
+                    receiverSol: freelancer.publicKey,
+                    escrowTokenAccount: null,
+                    receiverTokenAccount: null,
+                    tokenMint: null,
+                    tokenProgram: null,
+                    systemProgram: SystemProgram.programId,
+                })
+                .signers([freelancer])
+                .rpc();
+
+            await program.methods
+                .updateFreelancerBadge(amount)
+                .accountsStrict({
+                    freelancer: freelancer.publicKey,
+                    badge: badgePda,
+                })
+                .signers([freelancer])
+                .rpc();
+        }
+
+        // Fetch the badge and verify completed escrows and tier logic
+        const badge = await program.account.freelancerBadge.fetch(badgePda);
+
+        assert.strictEqual(
+            badge.completedEscrows,
+            10,
+            "completedEscrows should be 10 after 10 completed escrows"
+        );
+
+        // Professional tier should be reached after 10 completed escrows (10-24 escrows = Professional)
+        assert.deepStrictEqual(
+            badge.tier,
+            { professional: {} },
+            "Badge tier should be Professional after 10 completed escrows"
+        );
+
+        // Total value completed should be the sum of all escrow amounts
+        const expectedTotalValue = amount.toNumber() * 10;
+        assert.strictEqual(
+            badge.totalValueCompleted.toNumber(),
+            expectedTotalValue,
+            "totalValueCompleted should equal the sum of all completed escrow amounts"
+        );
     });
 }); 
