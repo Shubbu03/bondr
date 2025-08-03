@@ -5,15 +5,21 @@ package_manager = "yarn"
 resolution = true
 skip-lint = false
 
-[programs.localnet]
-bondr = "6UxuwCfAsMhLMozd3cYr4vvZVQHS1eKiw8JtoBXLxLWp"
+[programs.devnet]
+bondr = "CFXd43mg9TDN5cSHgaUm5ahPSTvLTb9hw3XuASCVL4wh"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "localnet"
-wallet = "~/.config/solana/id.json"
+wallet = "~/.config/solana/wallet.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+[test.validator]
+url = "https://api.devnet.solana.com"
+
+[[test.validator.clone]]
+address = "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
