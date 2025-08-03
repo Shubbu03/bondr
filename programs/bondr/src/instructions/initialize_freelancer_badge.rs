@@ -22,13 +22,13 @@ pub struct InitializeFreelancerBadge<'info> {
 impl<'info> InitializeFreelancerBadge<'info> {
     pub fn initialize_freelancer_badge(&mut self, bump: u8) -> Result<()> {
         self.badge.set_inner(FreelancerBadge {
-            tier: ReputationTier::Verified,
+            tier: ReputationTier::Unranked,
             completed_escrows: 0,
             total_value_completed: 0,
             freelancer: self.freelancer.key(),
             bump,
         });
-        
+
         Ok(())
     }
 }

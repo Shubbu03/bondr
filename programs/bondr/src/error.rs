@@ -28,4 +28,6 @@ pub enum BondrError {
     InsufficientEscrows,
     #[msg("NFT for this tier already minted")]
     NFTAlreadyMinted,
+    #[msg("Invalid MPL Program ID")]
+    InvalidMplKey,
 }
