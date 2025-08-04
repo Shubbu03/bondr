@@ -58,6 +58,6 @@ pub mod bondr {
     }
 
     pub fn mint_reputation_nft(ctx: Context<MintReputationNFT>) -> Result<()> {
-        ctx.accounts.mint_nft(ctx.bumps.badge_authority)
+        ctx.accounts.mint_nft()
     }
 }
