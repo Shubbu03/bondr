@@ -1,20 +1,22 @@
 import * as anchor from "@coral-xyz/anchor";
-import { Keypair, SystemProgram } from "@solana/web3.js";
+import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import { assert } from "chai";
 import { describe, it } from "mocha";
 
 import { program, createFundedKeypair } from "../utils/setup";
 import { deriveEscrowPDAs, deriveUserStatsPDA, deriveFreelancerBadgePDA } from "../utils/helpers";
+import { MPL_CORE_PROGRAM_ID } from "@metaplex-foundation/mpl-core";
 
 describe("Complete Escrow Flow Integration", () => {
-    it("should complete full escrow lifecycle: initialize → release → claim → badge update", async () => {
-        // Setup
+    // MPL Core program ID
+    const MPL_PROGRAM_ID = new PublicKey(MPL_CORE_PROGRAM_ID);
+
+    it("should complete full escrow lifecycle: initialize → release → claim → badge update → mint nft", async () => {
         const client = await createFundedKeypair();
         const freelancer = await createFundedKeypair(1_000_000_000);
-        const amount = new anchor.BN(5_000_000); // 0.005 SOL
+        const amount = new anchor.BN(5_000_000);
         const refSeed = 67;
 
-        // Derive all PDAs
         const { escrowPda, vaultPda } = await deriveEscrowPDAs(client.publicKey, freelancer.publicKey, refSeed);
         const { statsPda: clientStatsPda } = await deriveUserStatsPDA(client.publicKey);
         const { statsPda: freelancerStatsPda } = await deriveUserStatsPDA(freelancer.publicKey);
@@ -110,6 +112,36 @@ describe("Complete Escrow Flow Integration", () => {
         assert.strictEqual(badge.completedEscrows, 1);
         assert.strictEqual(badge.totalValueCompleted.toNumber(), amount.toNumber());
         assert.deepStrictEqual(badge.tier, { unranked: {} }); // Still verified at 1 escrow
+
+        // 6. Mint NFT to upgrade tier (but this will fail since 1 escrow is insufficient for any tier)
+        const asset = Keypair.generate();
+        const collection = Keypair.generate();
+
+        try {
+            await program.methods
+                .mintReputationNft()
+                .accountsStrict({
+                    freelancer: freelancer.publicKey,
+                    badge: badgePda,
+                    asset: asset.publicKey,
+                    collection: collection.publicKey,
+                    mplCoreProgram: MPL_PROGRAM_ID,
+                    systemProgram: SystemProgram.programId,
+                })
+                .signers([freelancer, asset])
+                .rpc();
+
+            assert.fail("Expected InsufficientEscrows error");
+        } catch (error) {
+            assert.isTrue(
+                error.message.includes("Insufficient escrows completed for NFT minting") ||
+                error.message.includes("InsufficientEscrows")
+            );
+        }
+
+        // Verify tier remains unranked after failed mint attempt
+        badge = await program.account.freelancerBadge.fetch(badgePda);
+        assert.deepStrictEqual(badge.tier, { unranked: {} });
     });
 
     it("should handle multiple escrows and tier progression", async () => {
@@ -192,22 +224,20 @@ describe("Complete Escrow Flow Integration", () => {
                 .rpc();
         }
 
-        // Fetch the badge and verify completed escrows and tier logic after all claimPayment + updateFreelancerBadge calls
+        // Fetch the badge and verify completed escrows
         const badge = await program.account.freelancerBadge.fetch(badgePda);
 
         // The completed_escrows counter should only increment after releasePayment + claimPayment + updateFreelancerBadge for each escrow
-        // Make sure this matches the number of actual completed escrows, not just escrow creations
         assert.strictEqual(
             badge.completedEscrows,
             5,
             "completedEscrows should reflect actual completed escrows (release+claim+update), not just escrow creations"
         );
 
-        // Verified tier should be reached after 5 completed escrows (3-9 escrows = Verified)
         assert.deepStrictEqual(
             badge.tier,
-            { verified: {} },
-            "Badge tier should be Verified after 5 completed escrows"
+            { unranked: {} },
+            "Badge tier should remain unranked until NFT is minted"
         );
 
         // Total value completed should be the sum of all escrow amounts
@@ -216,6 +246,31 @@ describe("Complete Escrow Flow Integration", () => {
             badge.totalValueCompleted.toNumber(),
             expectedTotalValue,
             "totalValueCompleted should equal the sum of all completed escrow amounts"
+        );
+
+        // Now mint the NFT to upgrade to Verified tier
+        const asset = Keypair.generate();
+        const collection = Keypair.generate();
+
+        await program.methods
+            .mintReputationNft()
+            .accountsStrict({
+                freelancer: freelancer.publicKey,
+                badge: badgePda,
+                asset: asset.publicKey,
+                collection: collection.publicKey,
+                mplCoreProgram: MPL_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+            })
+            .signers([freelancer, asset])
+            .rpc();
+
+        // Verify tier is now updated to Verified
+        const updatedBadge = await program.account.freelancerBadge.fetch(badgePda);
+        assert.deepStrictEqual(
+            updatedBadge.tier,
+            { verified: {} },
+            "Badge tier should be Verified after minting NFT"
         );
     });
 
@@ -299,7 +354,7 @@ describe("Complete Escrow Flow Integration", () => {
                 .rpc();
         }
 
-        // Fetch the badge and verify completed escrows and tier logic
+        // Fetch the badge and verify completed escrows
         const badge = await program.account.freelancerBadge.fetch(badgePda);
 
         assert.strictEqual(
@@ -308,11 +363,10 @@ describe("Complete Escrow Flow Integration", () => {
             "completedEscrows should be 10 after 10 completed escrows"
         );
 
-        // Professional tier should be reached after 10 completed escrows (10-24 escrows = Professional)
         assert.deepStrictEqual(
             badge.tier,
-            { professional: {} },
-            "Badge tier should be Professional after 10 completed escrows"
+            { unranked: {} },
+            "Badge tier should remain unranked until NFT is minted"
         );
 
         // Total value completed should be the sum of all escrow amounts
@@ -321,6 +375,31 @@ describe("Complete Escrow Flow Integration", () => {
             badge.totalValueCompleted.toNumber(),
             expectedTotalValue,
             "totalValueCompleted should equal the sum of all completed escrow amounts"
+        );
+
+        // Now mint the NFT to upgrade to Professional tier
+        const asset = Keypair.generate();
+        const collection = Keypair.generate();
+
+        await program.methods
+            .mintReputationNft()
+            .accountsStrict({
+                freelancer: freelancer.publicKey,
+                badge: badgePda,
+                asset: asset.publicKey,
+                collection: collection.publicKey,
+                mplCoreProgram: MPL_PROGRAM_ID,
+                systemProgram: SystemProgram.programId,
+            })
+            .signers([freelancer, asset])
+            .rpc();
+
+        // Verify tier is now updated to Professional
+        const updatedBadge = await program.account.freelancerBadge.fetch(badgePda);
+        assert.deepStrictEqual(
+            updatedBadge.tier,
+            { professional: {} },
+            "Badge tier should be Professional after minting NFT"
         );
     });
 }); 
