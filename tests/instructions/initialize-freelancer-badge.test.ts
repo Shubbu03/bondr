@@ -36,8 +36,6 @@ describe("initialize_freelancer_badge()", () => {
         assert.strictEqual(badge.freelancer.toBase58(), freelancer.publicKey.toBase58());
         assert.strictEqual(badge.completedEscrows, 0);
         assert.strictEqual(badge.totalValueCompleted.toNumber(), 0);
-        // Tier starts unranked until first NFT is minted
-        // assert.deepStrictEqual(badge.tier, { unranked: {} });
     });
 
     it("fails if badge already exists", async () => {
@@ -75,8 +73,8 @@ describe("initialize_freelancer_badge()", () => {
             await program.methods
                 .initializeFreelancerBadge()
                 .accountsStrict({
-                    freelancer: wrongFreelancer.publicKey, // Wrong signer
-                    badge: targetBadgePda, // Target's badge PDA
+                    freelancer: wrongFreelancer.publicKey,
+                    badge: targetBadgePda,
                     systemProgram: SystemProgram.programId,
                 })
                 .signers([wrongFreelancer])
@@ -85,7 +83,6 @@ describe("initialize_freelancer_badge()", () => {
             assert.fail("should have failed due to PDA mismatch");
         } catch (err: any) {
             const msg = err.error?.errorMessage || err.message;
-            // Should fail because PDA doesn't match the signer
             assert.match(msg, /(constraint|seeds)/i);
         }
     });

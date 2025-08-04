@@ -7,7 +7,7 @@ import { program, connection, sleep } from "../utils/setup";
 import { deriveEscrowPDAs, deriveUserStatsPDA } from "../utils/helpers";
 
 describe("initialize_escrow()", () => {
-    const amount = new anchor.BN(1_000_000); // 0.001 SOL
+    const amount = new anchor.BN(1_000_000);
     const refSeed = 42;
 
     let sender: Keypair;
@@ -20,18 +20,15 @@ describe("initialize_escrow()", () => {
     let statsBump: number;
 
     before(async () => {
-        // 1. generating fresh keypairs so tests are deterministic & isolated.
         sender = Keypair.generate();
         receiver = Keypair.generate();
 
-        // 2. adding funds to both accounts, waiting for finalising
         await Promise.all([
-            connection.requestAirdrop(sender.publicKey, 2_000_000_000),  // 2 SOL
-            connection.requestAirdrop(receiver.publicKey, 1_000_000_000) // 1 SOL
+            connection.requestAirdrop(sender.publicKey, 2_000_000_000),
+            connection.requestAirdrop(receiver.publicKey, 1_000_000_000)
         ]);
         await sleep(3_000);
 
-        // 3. Derive PDAs using helpers
         const escrowPDAs = await deriveEscrowPDAs(sender.publicKey, receiver.publicKey, refSeed);
         escrowPda = escrowPDAs.escrowPda;
         escrowBump = escrowPDAs.escrowBump;
@@ -44,7 +41,6 @@ describe("initialize_escrow()", () => {
     });
 
     it("Initializes an escrow & sender stats correctly", async () => {
-        //testing sol transfer first
         await program.methods
             .initializeEscrow(amount, refSeed, false)
             .accountsPartial({
@@ -54,7 +50,6 @@ describe("initialize_escrow()", () => {
                 vault: vaultPda,
                 senderStats: statsPda,
                 systemProgram: SystemProgram.programId,
-                // Passing `null` for optional token accounts because this is SOL
                 tokenProgram: null,
                 senderTokenAccount: null,
                 escrowTokenAccount: null,
@@ -64,7 +59,6 @@ describe("initialize_escrow()", () => {
             .signers([sender])
             .rpc();
 
-        // validating on chain data
         const escrowAccount = await program.account.escrow.fetch(escrowPda);
         assert.ok(escrowAccount.sender.equals(sender.publicKey));
         assert.ok(escrowAccount.receiver.equals(receiver.publicKey));
@@ -107,7 +101,6 @@ describe("initialize_escrow()", () => {
                 .rpc();
             assert.fail("instruction should have thrown");
         } catch (err) {
-            // Access the error message correctly for Anchor programs
             const errorMessage = err.error?.errorMessage || err.message;
             assert.strictEqual(errorMessage, "Amount can't be 0");
         }
@@ -117,7 +110,7 @@ describe("initialize_escrow()", () => {
         const selfSeed = 44;
         const { escrowPda: selfPda, vaultPda: selfVaultPda } = await deriveEscrowPDAs(
             sender.publicKey,
-            sender.publicKey, // same as sender
+            sender.publicKey,
             selfSeed
         );
 
@@ -126,7 +119,7 @@ describe("initialize_escrow()", () => {
                 .initializeEscrow(amount, selfSeed, false)
                 .accountsPartial({
                     sender: sender.publicKey,
-                    receiver: sender.publicKey, // same sender
+                    receiver: sender.publicKey,
                     escrow: selfPda,
                     vault: selfVaultPda,
                     senderStats: statsPda,
@@ -153,8 +146,8 @@ describe("initialize_escrow()", () => {
                 .accountsPartial({
                     sender: sender.publicKey,
                     receiver: receiver.publicKey,
-                    escrow: escrowPda, // previously initialised in happy-path test
-                    vault: vaultPda,   // vault from original test
+                    escrow: escrowPda,
+                    vault: vaultPda,
                     senderStats: statsPda,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: null,

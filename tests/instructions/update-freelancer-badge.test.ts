@@ -16,7 +16,6 @@ describe("update_freelancer_badge()", () => {
         await connection.requestAirdrop(freelancer.publicKey, 2_000_000_000);
         await sleep(3000);
 
-        // Initialize badge
         const { badgePda: derivedBadgePda } = await deriveFreelancerBadgePDA(freelancer.publicKey);
         badgePda = derivedBadgePda;
 
@@ -117,8 +116,8 @@ describe("update_freelancer_badge()", () => {
             await program.methods
                 .updateFreelancerBadge(amount)
                 .accountsStrict({
-                    freelancer: wrongFreelancer.publicKey, // Wrong signer
-                    badge: badgePda, // Original freelancer's badge
+                    freelancer: wrongFreelancer.publicKey,
+                    badge: badgePda,
                 })
                 .signers([wrongFreelancer])
                 .rpc();
@@ -162,7 +161,6 @@ describe("update_freelancer_badge() tier transitions", () => {
         const { badgePda: derivedBadgePda } = await deriveFreelancerBadgePDA(testFreelancer.publicKey);
         testBadgePda = derivedBadgePda;
 
-        // Initialize badge
         await program.methods
             .initializeFreelancerBadge()
             .accountsStrict({
@@ -177,7 +175,6 @@ describe("update_freelancer_badge() tier transitions", () => {
     it("transition from verified to professional at 5 escrows", async () => {
         const amount = new anchor.BN(1_000_000);
 
-        // Complete 4 escrows (should stay Verified)
         for (let i = 0; i < 4; i++) {
             await program.methods
                 .updateFreelancerBadge(amount)
@@ -251,7 +248,7 @@ describe("update_freelancer_badge() error cases", () => {
                 .updateFreelancerBadge(amount)
                 .accountsStrict({
                     freelancer: newFreelancer.publicKey,
-                    badge: nonExistentBadgePda, // Badge doesn't exist
+                    badge: nonExistentBadgePda,
                 })
                 .signers([newFreelancer])
                 .rpc();

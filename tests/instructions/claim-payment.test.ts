@@ -94,7 +94,6 @@ describe("claim_payment()", () => {
     });
 
     it("fails if payment not released", async () => {
-        // Setup new unreleased escrow
         const newClient = Keypair.generate();
         const newFreelancer = Keypair.generate();
         const newRefSeed = 88;
@@ -173,10 +172,10 @@ describe("claim_payment()", () => {
                 .claimPayment(refSeed, false)
                 .accountsPartial({
                     client: client.publicKey,
-                    freelancer: client.publicKey, // Client pretending to be freelancer
-                    escrow: wrongEscrowPda, // Non-existent escrow (client->client instead of client->freelancer)
-                    vault: wrongVaultPda, // Non-existent vault
-                    receiverStats: clientStatsPda, // Client's stats
+                    freelancer: client.publicKey,
+                    escrow: wrongEscrowPda,
+                    vault: wrongVaultPda,
+                    receiverStats: clientStatsPda,
                     receiverSol: client.publicKey,
                     escrowTokenAccount: null,
                     receiverTokenAccount: null,
@@ -189,7 +188,6 @@ describe("claim_payment()", () => {
             assert.fail("Expected failure when claimed by wrong actor");
         } catch (err: any) {
             const msg = err.error?.errorMessage || err.message;
-            // Should fail because the escrow account doesn't exist
             assert.match(msg, /(account|not found|does not exist)/i);
         }
     });

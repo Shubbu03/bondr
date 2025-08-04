@@ -18,7 +18,6 @@ describe("release_payment()", () => {
     const amount = new anchor.BN(2_000_000);
 
     before(async () => {
-        // 1. generate keypairs & fund them
         client = Keypair.generate();
         freelancer = Keypair.generate();
 
@@ -28,7 +27,6 @@ describe("release_payment()", () => {
         ]);
         await sleep(3_000);
 
-        // 2. derive PDAs using helpers
         const escrowPDAs = await deriveEscrowPDAs(client.publicKey, freelancer.publicKey, refSeed);
         escrowPda = escrowPDAs.escrowPda;
         escrowBump = escrowPDAs.escrowBump;
@@ -37,7 +35,6 @@ describe("release_payment()", () => {
 
         const { statsPda } = await deriveUserStatsPDA(client.publicKey);
 
-        // 3. bootstrap escrow
         await program.methods
             .initializeEscrow(amount, refSeed, false)
             .accountsPartial({
@@ -76,7 +73,7 @@ describe("release_payment()", () => {
             await program.methods
                 .releasePayment(refSeed)
                 .accountsStrict({
-                    client: freelancer.publicKey, // NOT the sender
+                    client: freelancer.publicKey,
                     escrow: escrowPda,
                 })
                 .signers([freelancer])
