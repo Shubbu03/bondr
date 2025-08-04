@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{error::BondrError, FreelancerBadge, ReputationTier};
+use crate::{error::BondrError, FreelancerBadge};
 
 #[derive(Accounts)]
 pub struct UpdateFreelancerBadge<'info> {
