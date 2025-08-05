@@ -30,4 +30,8 @@ pub enum BondrError {
     NFTAlreadyMinted,
     #[msg("Invalid MPL Program ID")]
     InvalidMplKey,
+    #[msg("Invalid multisig config")]
+    InvalidMultisigConfig,
+    #[msg("Duplicate member in multisig")]
+    DuplicateMember
 }
