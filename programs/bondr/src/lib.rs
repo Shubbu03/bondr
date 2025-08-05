@@ -60,4 +60,14 @@ pub mod bondr {
     pub fn mint_reputation_nft(ctx: Context<MintReputationNFT>) -> Result<()> {
         ctx.accounts.mint_nft()
     }
+
+    pub fn initialize_multisig_client(
+        ctx: Context<InitializeMultisigClient>,
+        members: [Pubkey; MAX_MULTISIG_MEMBERS],
+        member_count: u8,
+        threshold: u8,
+    ) -> Result<()> {
+        ctx.accounts
+            .init_multisig_client(members, member_count, threshold, ctx.bumps.multisig)
+    }
 }
