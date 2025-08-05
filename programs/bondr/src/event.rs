@@ -16,3 +16,11 @@ pub struct ReputationMilestoneEvent {
     pub user: Pubkey,
     pub tier: ReputationTier,
 }
+
+#[event]
+pub struct ClientMultisigCreated {
+    pub client: Pubkey,
+    pub multisig: Pubkey,
+    pub member_count: u8,
+    pub threshold: u8,
+}
