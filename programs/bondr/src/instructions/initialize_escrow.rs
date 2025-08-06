@@ -1,7 +1,7 @@
 use crate::{
     error::BondrError,
     utils::{transfer_sol, transfer_spl_tokens, validate_token_accounts},
-    Escrow, EscrowCreateEvent, UserStats,
+    ClientMultisig, Escrow, EscrowCreateEvent, UserStats,
 };
 use anchor_lang::prelude::*;
 use anchor_spl::{
@@ -47,6 +47,11 @@ pub struct InitializeEscrow<'info> {
     )]
     pub sender_stats: Account<'info, UserStats>,
 
+    /// Optional multisig account (present when is_multisig == true)
+    /// CHECK: validated in instruction logic when provided
+    #[account(mut)]
+    pub client_multisig: Option<Account<'info, ClientMultisig>>,
+
     // For SOL transfers
     pub system_program: Program<'info, System>,
 
@@ -74,6 +79,7 @@ impl<'info> InitializeEscrow<'info> {
         amount: u64,
         reference_seed: u8,
         is_token_transfer: bool,
+        is_multisig: bool,
         bump: u8,
         vault_bump: u8,
         stats_bump: u8,
@@ -88,7 +94,26 @@ impl<'info> InitializeEscrow<'info> {
             BondrError::SelfTransfer
         );
 
-        // 2. Set initial values for escrow account
+        // 2. if is_multisig is true, we check here that it should be present
+        if is_multisig {
+            require!(
+                self.client_multisig.is_some(),
+                BondrError::InvalidMultisigConfig
+            );
+        } else {
+            require!(
+                self.client_multisig.is_none(),
+                BondrError::InvalidMultisigConfig
+            );
+        }
+
+        // 3. Set initial values for escrow account
+        let mut client_multisig_pubkey: Option<Pubkey> = None;
+        if is_multisig {
+            // we will assign after validating the multisig account
+            client_multisig_pubkey = Some(self.client_multisig.as_ref().unwrap().key());
+        }
+
         self.escrow.set_inner(Escrow {
             sender: self.sender.key(),
             receiver: self.receiver.key(),
@@ -96,9 +121,10 @@ impl<'info> InitializeEscrow<'info> {
             is_released: false,
             bump,
             vault_bump,
+            client_multisig: client_multisig_pubkey,
         });
 
-        // 3. Transfer based on is_token_transfer flag
+        // 4. Transfer based on is_token_transfer flag
         if is_token_transfer {
             validate_token_accounts(
                 &self.token_program,
@@ -126,7 +152,32 @@ impl<'info> InitializeEscrow<'info> {
             )?;
         }
 
-        // 4. init user stats
+        // 5. If multisig, validating and linking pending_escrow on multisig account
+        if is_multisig {
+            let multisig = self.client_multisig.as_mut().unwrap();
+
+            // Ensure multisig is not already busy
+            require!(
+                multisig.pending_escrow == Pubkey::default(),
+                BondrError::MultisigBusy
+            );
+
+            // Ensure sender is part of multisig members (safety)
+            let mut found = false;
+            let active = multisig.member_count as usize;
+            for i in 0..active {
+                if multisig.members[i] == self.sender.key() {
+                    found = true;
+                    break;
+                }
+            }
+            require!(found, BondrError::InvalidMultisigConfig);
+
+            // Linking multisig -> pending escrow
+            multisig.pending_escrow = self.escrow.key();
+        }
+
+        // 6. init user stats
         if self.sender_stats.user == Pubkey::default() {
             self.sender_stats.set_inner(UserStats {
                 user: self.sender.key(),
@@ -135,7 +186,7 @@ impl<'info> InitializeEscrow<'info> {
             });
         }
 
-        // 5. Emit events
+        // 7. Emit events
         emit!(EscrowCreateEvent {
             sender: self.sender.key(),
             receiver: self.receiver.key(),
@@ -145,10 +196,11 @@ impl<'info> InitializeEscrow<'info> {
         });
 
         msg!(
-            "Escrow initialized: {} -> {} for {} tokens",
+            "Escrow initialized: {} -> {} for {} tokens (multisig: {})",
             self.sender.key(),
             self.receiver.key(),
-            amount
+            amount,
+            is_multisig
         );
         Ok(())
     }

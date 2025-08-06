@@ -33,5 +33,7 @@ pub enum BondrError {
     #[msg("Invalid multisig config")]
     InvalidMultisigConfig,
     #[msg("Duplicate member in multisig")]
-    DuplicateMember
+    DuplicateMember,
+    #[msg("Multisig is already busy")]
+    MultisigBusy,
 }
