@@ -39,13 +39,14 @@ describe("Complete Escrow Flow Integration", () => {
 
         // 2. Initialize escrow
         await program.methods
-            .initializeEscrow(amount, refSeed, false)
+            .initializeEscrow(amount, refSeed, false, false)
             .accountsPartial({
                 sender: client.publicKey,
                 receiver: freelancer.publicKey,
                 escrow: escrowPda,
                 vault: vaultPda,
                 senderStats: clientStatsPda,
+                clientMultisig: null,
                 systemProgram: SystemProgram.programId,
                 tokenProgram: null,
                 senderTokenAccount: null,
@@ -170,13 +171,14 @@ describe("Complete Escrow Flow Integration", () => {
 
             // Initialize → Release → Claim → Update Badge
             await program.methods
-                .initializeEscrow(amount, refSeed, false)
+                .initializeEscrow(amount, refSeed, false, false)
                 .accountsPartial({
                     sender: client.publicKey,
                     receiver: freelancer.publicKey,
                     escrow: escrowPda,
                     vault: vaultPda,
                     senderStats: clientStatsPda,
+                    clientMultisig: null,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: null,
                     senderTokenAccount: null,
@@ -300,13 +302,14 @@ describe("Complete Escrow Flow Integration", () => {
 
             // Initialize → Release → Claim → Update Badge
             await program.methods
-                .initializeEscrow(amount, refSeed, false)
+                .initializeEscrow(amount, refSeed, false, false)
                 .accountsPartial({
                     sender: client.publicKey,
                     receiver: freelancer.publicKey,
                     escrow: escrowPda,
                     vault: vaultPda,
                     senderStats: clientStatsPda,
+                    clientMultisig: null,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: null,
                     senderTokenAccount: null,

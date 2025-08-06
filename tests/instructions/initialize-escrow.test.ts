@@ -42,13 +42,14 @@ describe("initialize_escrow()", () => {
 
     it("Initializes an escrow & sender stats correctly", async () => {
         await program.methods
-            .initializeEscrow(amount, refSeed, false)
+            .initializeEscrow(amount, refSeed, false, false)
             .accountsPartial({
                 sender: sender.publicKey,
                 receiver: receiver.publicKey,
                 escrow: escrowPda,
                 vault: vaultPda,
                 senderStats: statsPda,
+                clientMultisig: null,
                 systemProgram: SystemProgram.programId,
                 tokenProgram: null,
                 senderTokenAccount: null,
@@ -83,13 +84,14 @@ describe("initialize_escrow()", () => {
 
         try {
             await program.methods
-                .initializeEscrow(zeroAmount, testSeed, false)
+                .initializeEscrow(zeroAmount, testSeed, false, false)
                 .accountsPartial({
                     sender: sender.publicKey,
                     receiver: receiver.publicKey,
                     escrow: wrongEscrowPda,
                     vault: wrongVaultPda,
                     senderStats: statsPda,
+                    clientMultisig: null,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: null,
                     senderTokenAccount: null,
@@ -116,13 +118,14 @@ describe("initialize_escrow()", () => {
 
         try {
             await program.methods
-                .initializeEscrow(amount, selfSeed, false)
+                .initializeEscrow(amount, selfSeed, false, false)
                 .accountsPartial({
                     sender: sender.publicKey,
                     receiver: sender.publicKey,
                     escrow: selfPda,
                     vault: selfVaultPda,
                     senderStats: statsPda,
+                    clientMultisig: null,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: null,
                     senderTokenAccount: null,
@@ -142,13 +145,14 @@ describe("initialize_escrow()", () => {
     it("fails if escrow PDA already exists (duplicate escrow)", async () => {
         try {
             await program.methods
-                .initializeEscrow(amount, refSeed, false)
+                .initializeEscrow(amount, refSeed, false, false)
                 .accountsPartial({
                     sender: sender.publicKey,
                     receiver: receiver.publicKey,
                     escrow: escrowPda,
                     vault: vaultPda,
                     senderStats: statsPda,
+                    clientMultisig: null,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: null,
                     senderTokenAccount: null,

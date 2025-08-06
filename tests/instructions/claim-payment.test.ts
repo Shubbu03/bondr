@@ -40,13 +40,14 @@ describe("claim_payment()", () => {
 
         // 4. Initialize escrow
         await program.methods
-            .initializeEscrow(amount, refSeed, false)
+            .initializeEscrow(amount, refSeed, false, false)
             .accountsPartial({
                 sender: client.publicKey,
                 receiver: freelancer.publicKey,
                 escrow: escrowPda,
                 vault: vaultPda,
                 senderStats: clientStatsPda,
+                clientMultisig: null,
                 systemProgram: SystemProgram.programId,
                 tokenProgram: null,
                 senderTokenAccount: null,
@@ -114,13 +115,14 @@ describe("claim_payment()", () => {
         const { statsPda: newClientStatsPda } = await deriveUserStatsPDA(newClient.publicKey);
 
         await program.methods
-            .initializeEscrow(newAmount, newRefSeed, false)
+            .initializeEscrow(newAmount, newRefSeed, false, false)
             .accountsPartial({
                 sender: newClient.publicKey,
                 receiver: newFreelancer.publicKey,
                 escrow: newEscrowPda,
                 vault: newVaultPda,
                 senderStats: newClientStatsPda,
+                clientMultisig: null,
                 systemProgram: SystemProgram.programId,
                 tokenProgram: null,
                 senderTokenAccount: null,
