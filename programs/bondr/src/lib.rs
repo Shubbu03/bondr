@@ -25,11 +25,13 @@ pub mod bondr {
         amount: u64,
         reference_seed: u8,
         is_token_transfer: bool,
+        is_multisig: bool,
     ) -> Result<()> {
         ctx.accounts.init_escrow(
             amount,
             reference_seed,
             is_token_transfer,
+            is_multisig,
             ctx.bumps.escrow,
             ctx.bumps.vault,
             ctx.bumps.sender_stats,
@@ -69,5 +71,12 @@ pub mod bondr {
     ) -> Result<()> {
         ctx.accounts
             .init_multisig_client(members, member_count, threshold, ctx.bumps.multisig)
+    }
+
+    pub fn approve_multisig_release(
+        ctx: Context<ApproveMultisigRelease>,
+        _reference_seed: u8,
+    ) -> Result<()> {
+        ctx.accounts.approve_multisig()
     }
 }
