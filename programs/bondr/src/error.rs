@@ -36,4 +36,10 @@ pub enum BondrError {
     DuplicateMember,
     #[msg("Multisig is already busy")]
     MultisigBusy,
+    #[msg("Caller is not a member of the multisig group.")]
+    NotMultisigMember,
+    #[msg("This member has already approved.")]
+    AlreadyApproved,
+    #[msg("Pending escrow in multisig does not match this escrow.")]
+    MultisigPendingEscrowMismatch,
 }

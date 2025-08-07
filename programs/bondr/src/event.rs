@@ -24,3 +24,10 @@ pub struct ClientMultisigCreated {
     pub member_count: u8,
     pub threshold: u8,
 }
+
+#[event]
+pub struct MultisigApprovalAdded {
+    pub multisig: Pubkey,
+    pub member: Pubkey,
+    pub escrow: Pubkey,
+}
