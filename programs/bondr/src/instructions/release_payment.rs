@@ -18,18 +18,17 @@ pub struct ReleasePayment<'info> {
 
 impl<'info> ReleasePayment<'info> {
     pub fn release_payment(&mut self, _reference_seed: u8) -> Result<()> {
+        // 1. validation
         require_keys_eq!(
             self.client.key(),
             self.escrow.sender,
             BondrError::UnauthorizedSender
         );
-        // Check if already released
+        // 2. checking if already released
         require!(!self.escrow.is_released, BondrError::AlreadyReleased);
 
-        // Update state
+        // 3. updating state
         self.escrow.is_released = true;
-
-        msg!("Payment released by client: {}", self.client.key());
 
         Ok(())
     }

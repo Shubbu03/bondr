@@ -195,13 +195,6 @@ impl<'info> InitializeEscrow<'info> {
             is_token_transfer
         });
 
-        msg!(
-            "Escrow initialized: {} -> {} for {} tokens (multisig: {})",
-            self.sender.key(),
-            self.receiver.key(),
-            amount,
-            is_multisig
-        );
         Ok(())
     }
 }
