@@ -42,4 +42,6 @@ pub enum BondrError {
     AlreadyApproved,
     #[msg("Pending escrow in multisig does not match this escrow.")]
     MultisigPendingEscrowMismatch,
+    #[msg("Multisig threshold is not met, can't withdraw amount")]
+    MultisigThresholdNotMet,
 }

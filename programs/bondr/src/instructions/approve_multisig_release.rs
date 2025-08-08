@@ -54,10 +54,23 @@ impl<'info> ApproveMultisigRelease<'info> {
             crate::error::BondrError::AlreadyApproved
         );
 
-        // 4. approving this member -> 1 for approve on that index for that memeber
+        // 4. approving this member -> 1 for approve on that index for that member
         multisig.approvals[member_index] = 1;
 
-        // 5. Emit event
+        // 5. If threshold is now met, mark the escrow as released.
+        //    Transfer still only happens in claim_payment.
+        let approvals_met = multisig
+            .approvals
+            .iter()
+            .take(multisig.member_count as usize)
+            .filter(|&&a| a == 1)
+            .count() as u8;
+
+        if approvals_met >= multisig.threshold {
+            self.escrow.is_released = true;
+        }
+
+        // 6. Emit event
         emit!(MultisigApprovalAdded {
             multisig: multisig.key(),
             member: self.member.key(),
