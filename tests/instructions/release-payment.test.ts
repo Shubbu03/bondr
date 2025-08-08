@@ -36,13 +36,14 @@ describe("release_payment()", () => {
         const { statsPda } = await deriveUserStatsPDA(client.publicKey);
 
         await program.methods
-            .initializeEscrow(amount, refSeed, false)
+            .initializeEscrow(amount, refSeed, false, false)
             .accountsPartial({
                 sender: client.publicKey,
                 receiver: freelancer.publicKey,
                 escrow: escrowPda,
                 vault: vaultPda,
                 senderStats: statsPda,
+                clientMultisig: null,
                 systemProgram: SystemProgram.programId,
                 tokenProgram: null,
                 senderTokenAccount: null,

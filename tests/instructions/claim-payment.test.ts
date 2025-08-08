@@ -40,13 +40,14 @@ describe("claim_payment()", () => {
 
         // 4. Initialize escrow
         await program.methods
-            .initializeEscrow(amount, refSeed, false)
+            .initializeEscrow(amount, refSeed, false, false)
             .accountsPartial({
                 sender: client.publicKey,
                 receiver: freelancer.publicKey,
                 escrow: escrowPda,
                 vault: vaultPda,
                 senderStats: clientStatsPda,
+                clientMultisig: null,
                 systemProgram: SystemProgram.programId,
                 tokenProgram: null,
                 senderTokenAccount: null,
@@ -69,7 +70,7 @@ describe("claim_payment()", () => {
     });
 
     it("claims payment successfully", async () => {
-        const { statsPda: freelancerStatsPda } = await deriveUserStatsPDA(freelancer.publicKey);
+        const { statsPda: freelancerStatsPda, statsBump: freelancerStatsBump } = await deriveUserStatsPDA(freelancer.publicKey);
 
         await program.methods
             .claimPayment(refSeed, false)
@@ -79,6 +80,7 @@ describe("claim_payment()", () => {
                 escrow: escrowPda,
                 vault: vaultPda,
                 receiverStats: freelancerStatsPda,
+                multisig: null,
                 receiverSol: freelancer.publicKey,
                 escrowTokenAccount: null,
                 receiverTokenAccount: null,
@@ -114,13 +116,14 @@ describe("claim_payment()", () => {
         const { statsPda: newClientStatsPda } = await deriveUserStatsPDA(newClient.publicKey);
 
         await program.methods
-            .initializeEscrow(newAmount, newRefSeed, false)
+            .initializeEscrow(newAmount, newRefSeed, false, false)
             .accountsPartial({
                 sender: newClient.publicKey,
                 receiver: newFreelancer.publicKey,
                 escrow: newEscrowPda,
                 vault: newVaultPda,
                 senderStats: newClientStatsPda,
+                clientMultisig: null,
                 systemProgram: SystemProgram.programId,
                 tokenProgram: null,
                 senderTokenAccount: null,
@@ -131,7 +134,7 @@ describe("claim_payment()", () => {
             .signers([newClient])
             .rpc();
 
-        const { statsPda: freelancerStatsPda } = await deriveUserStatsPDA(newFreelancer.publicKey);
+        const { statsPda: freelancerStatsPda, statsBump: freelancerStatsBump } = await deriveUserStatsPDA(newFreelancer.publicKey);
 
         try {
             await program.methods
@@ -142,6 +145,7 @@ describe("claim_payment()", () => {
                     escrow: newEscrowPda,
                     vault: newVaultPda,
                     receiverStats: freelancerStatsPda,
+                    multisig: null,
                     receiverSol: newFreelancer.publicKey,
                     escrowTokenAccount: null,
                     receiverTokenAccount: null,
@@ -165,7 +169,7 @@ describe("claim_payment()", () => {
             refSeed
         );
 
-        const { statsPda: clientStatsPda } = await deriveUserStatsPDA(client.publicKey);
+        const { statsPda: clientStatsPda, statsBump: clientStatsBump } = await deriveUserStatsPDA(client.publicKey);
 
         try {
             await program.methods
@@ -176,6 +180,7 @@ describe("claim_payment()", () => {
                     escrow: wrongEscrowPda,
                     vault: wrongVaultPda,
                     receiverStats: clientStatsPda,
+                    multisig: null,
                     receiverSol: client.publicKey,
                     escrowTokenAccount: null,
                     receiverTokenAccount: null,
@@ -191,4 +196,214 @@ describe("claim_payment()", () => {
             assert.match(msg, /(account|not found|does not exist)/i);
         }
     });
+
+    it("fails to claim payment if multisig threshold not met", async () => {
+        // Setup multisig test data
+        const multisigClient = Keypair.generate();
+        const member1 = Keypair.generate();
+        const member2 = Keypair.generate();
+        const member3 = Keypair.generate();
+
+        await Promise.all([
+            connection.requestAirdrop(multisigClient.publicKey, 2_000_000_000),
+            connection.requestAirdrop(member1.publicKey, 1_000_000_000),
+            connection.requestAirdrop(member2.publicKey, 1_000_000_000),
+            connection.requestAirdrop(member3.publicKey, 1_000_000_000),
+        ]);
+        await sleep(3000);
+
+        // Derive multisig PDA
+        const [multisigPda] = await PublicKey.findProgramAddress(
+            [Buffer.from("client_multisig"), multisigClient.publicKey.toBuffer()],
+            program.programId
+        );
+
+        // Initialize multisig client
+        await program.methods
+            .initializeMultisigClient([multisigClient.publicKey, member1.publicKey, member2.publicKey, member3.publicKey, new PublicKey("11111111111111111111111111111111")], 3, 2)
+            .accountsStrict({
+                client: multisigClient.publicKey,
+                multisig: multisigPda,
+                systemProgram: SystemProgram.programId,
+            })
+            .signers([multisigClient])
+            .rpc();
+
+        // Derive escrow PDAs for multisig test
+        const multisigEscrowPDAs = await deriveEscrowPDAs(multisigClient.publicKey, freelancer.publicKey, refSeed);
+
+        // Initialize escrow with multisig
+        await program.methods
+            .initializeEscrow(amount, refSeed, false, true)
+            .accountsPartial({
+                sender: multisigClient.publicKey,
+                receiver: freelancer.publicKey,
+                escrow: multisigEscrowPDAs.escrowPda,
+                vault: multisigEscrowPDAs.vaultPda,
+                senderStats: null,
+                clientMultisig: multisigPda,
+                systemProgram: SystemProgram.programId,
+                tokenProgram: null,
+                senderTokenAccount: null,
+                escrowTokenAccount: null,
+                tokenMint: null,
+                associatedTokenProgram: null,
+            })
+            .signers([multisigClient])
+            .rpc();
+
+        // Approve with only 1 member (threshold is 2)
+        await program.methods
+            .approveMultisigRelease(refSeed)
+            .accountsStrict({
+                member: member1.publicKey,
+                multisig: multisigPda,
+                escrow: multisigEscrowPDAs.escrowPda,
+                systemProgram: SystemProgram.programId,
+            })
+            .signers([member1])
+            .rpc();
+
+        const { statsPda: receiverStatsPda, statsBump: receiverStatsBump } = await deriveUserStatsPDA(freelancer.publicKey);
+
+        // Try claim without enough approvals
+        try {
+            await program.methods
+                .claimPayment(refSeed, false)
+                .accountsPartial({
+                    client: multisigClient.publicKey,
+                    freelancer: freelancer.publicKey,
+                    escrow: multisigEscrowPDAs.escrowPda,
+                    vault: multisigEscrowPDAs.vaultPda,
+                    receiverStats: receiverStatsPda,
+                    multisig: multisigPda,
+                    receiverSol: freelancer.publicKey,
+                    escrowTokenAccount: null,
+                    receiverTokenAccount: null,
+                    tokenMint: null,
+                    tokenProgram: null,
+                    systemProgram: SystemProgram.programId,
+                })
+                .signers([freelancer])
+                .rpc();
+            assert.fail("Expected MultisigThresholdNotMet");
+        } catch (err: any) {
+            const code = err.error?.errorCode?.code;
+            assert.strictEqual(code, "MultisigThresholdNotMet");
+        }
+    });
+
+    it("fails to claim payment if multisig pending escrow does not match", async () => {
+        const multisigClient = Keypair.generate();
+        const member1 = Keypair.generate();
+        const member2 = Keypair.generate();
+        const member3 = Keypair.generate();
+
+        await Promise.all([
+            connection.requestAirdrop(multisigClient.publicKey, 2_000_000_000),
+            connection.requestAirdrop(member1.publicKey, 1_000_000_000),
+            connection.requestAirdrop(member2.publicKey, 1_000_000_000),
+            connection.requestAirdrop(member3.publicKey, 1_000_000_000),
+        ]);
+        await sleep(3000);
+
+        // Derive multisig PDA
+        const [multisigPda] = await PublicKey.findProgramAddress(
+            [Buffer.from("client_multisig"), multisigClient.publicKey.toBuffer()],
+            program.programId
+        );
+
+        // Initialize multisig client (client must be a member; array must be length 5)
+        await program.methods
+            .initializeMultisigClient([
+                multisigClient.publicKey,
+                member1.publicKey,
+                member2.publicKey,
+                member3.publicKey,
+                new PublicKey("11111111111111111111111111111111"),
+            ], 3, 2)
+            .accountsStrict({
+                client: multisigClient.publicKey,
+                multisig: multisigPda,
+                systemProgram: SystemProgram.programId,
+            })
+            .signers([multisigClient])
+            .rpc();
+
+        // 1) Initialize a multisig escrow to set pending_escrow
+        const msRefSeed = 88;
+        const msEscrowPDAs = await deriveEscrowPDAs(multisigClient.publicKey, freelancer.publicKey, msRefSeed);
+
+        await program.methods
+            .initializeEscrow(amount, msRefSeed, false, true)
+            .accountsPartial({
+                sender: multisigClient.publicKey,
+                receiver: freelancer.publicKey,
+                escrow: msEscrowPDAs.escrowPda,
+                vault: msEscrowPDAs.vaultPda,
+                senderStats: null,
+                clientMultisig: multisigPda,
+                systemProgram: SystemProgram.programId,
+                tokenProgram: null,
+                senderTokenAccount: null,
+                escrowTokenAccount: null,
+                tokenMint: null,
+                associatedTokenProgram: null,
+            })
+            .signers([multisigClient])
+            .rpc();
+
+        // 2) Initialize a second NON-multisig escrow for same client
+        const nonMsRefSeed = 99;
+        const nonMsEscrowPDAs = await deriveEscrowPDAs(multisigClient.publicKey, freelancer.publicKey, nonMsRefSeed);
+        const { statsPda: clientStatsPda } = await deriveUserStatsPDA(multisigClient.publicKey);
+
+        await program.methods
+            .initializeEscrow(amount, nonMsRefSeed, false, false)
+            .accountsPartial({
+                sender: multisigClient.publicKey,
+                receiver: freelancer.publicKey,
+                escrow: nonMsEscrowPDAs.escrowPda,
+                vault: nonMsEscrowPDAs.vaultPda,
+                senderStats: clientStatsPda,
+                clientMultisig: null,
+                systemProgram: SystemProgram.programId,
+                tokenProgram: null,
+                senderTokenAccount: null,
+                escrowTokenAccount: null,
+                tokenMint: null,
+                associatedTokenProgram: null,
+            })
+            .signers([multisigClient])
+            .rpc();
+
+        const { statsPda: receiverStatsPda } = await deriveUserStatsPDA(freelancer.publicKey);
+
+        // 3) Try to claim the NON-multisig escrow while providing multisig -> should mismatch pending_escrow (which points to msEscrow)
+        try {
+            await program.methods
+                .claimPayment(nonMsRefSeed, false)
+                .accountsPartial({
+                    client: multisigClient.publicKey,
+                    freelancer: freelancer.publicKey,
+                    escrow: nonMsEscrowPDAs.escrowPda,
+                    vault: nonMsEscrowPDAs.vaultPda,
+                    receiverStats: receiverStatsPda,
+                    multisig: multisigPda,
+                    receiverSol: freelancer.publicKey,
+                    escrowTokenAccount: null,
+                    receiverTokenAccount: null,
+                    tokenMint: null,
+                    tokenProgram: null,
+                    systemProgram: SystemProgram.programId,
+                })
+                .signers([freelancer])
+                .rpc();
+            assert.fail("Expected MultisigPendingEscrowMismatch");
+        } catch (err: any) {
+            const code = err.error?.errorCode?.code;
+            assert.strictEqual(code, "MultisigPendingEscrowMismatch");
+        }
+    });
+
 }); 

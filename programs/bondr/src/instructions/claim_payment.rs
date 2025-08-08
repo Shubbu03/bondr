@@ -4,7 +4,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 use crate::{
     error::BondrError,
     utils::{transfer_sol, transfer_spl_tokens, validate_token_accounts},
-    Escrow, UserStats,
+    ClientMultisig, Escrow, UserStats, MAX_MULTISIG_MEMBERS,
 };
 
 #[derive(Accounts)]
@@ -42,6 +42,10 @@ pub struct ClaimPayment<'info> {
     )]
     pub receiver_stats: Account<'info, UserStats>,
 
+    // Optional client multisig. When present, constraints are enforced in instruction logic.
+    #[account(mut)]
+    pub multisig: Option<Account<'info, ClientMultisig>>,
+
     // SOL claim
     #[account(mut)]
     pub receiver_sol: SystemAccount<'info>,
@@ -65,14 +69,41 @@ impl<'info> ClaimPayment<'info> {
         is_token_transfer: bool,
         receiver_stats_bump: u8,
     ) -> Result<()> {
-        // 1. Input validation
+        // 1. multisig checks
+        if let Some(multisig) = &mut self.multisig {
+            // pending escrow match check
+            require_keys_eq!(
+                multisig.pending_escrow,
+                self.escrow.key(),
+                BondrError::MultisigPendingEscrowMismatch
+            );
+
+            // counting approvals
+            let approvals_met = multisig
+                .approvals
+                .iter()
+                .take(multisig.member_count as usize)
+                .filter(|&&a| a == 1)
+                .count() as u8;
+
+            require!(
+                approvals_met >= multisig.threshold,
+                BondrError::MultisigThresholdNotMet
+            );
+
+            // resetting pending escrow after release so multisig can be reused
+            multisig.pending_escrow = Pubkey::default();
+            multisig.approvals = [0u8; MAX_MULTISIG_MEMBERS];
+        }
+
+        // 2. Input validation
         require!(self.escrow.is_released, BondrError::NotReleased);
         require_keys_eq!(self.freelancer.key(), self.escrow.receiver);
 
-        // 2. using amount from escrow state
+        // 3. using amount from escrow state
         let amount = self.escrow.amount;
 
-        // 3. Creating signer seeds as movement from escrow -> freelancer
+        // 4. Creating signer seeds as movement from escrow -> freelancer
         let client_key = self.client.key();
         let freelancer_key = self.freelancer.key();
         let vault_seeds = &[
@@ -94,7 +125,7 @@ impl<'info> ClaimPayment<'info> {
         ];
         let escrow_signer_seeds = &[&escrow_seeds[..]];
 
-        // 4. transfer based on flag
+        // 5. transfer based on flag
         if is_token_transfer {
             validate_token_accounts(
                 &self.token_program,
@@ -122,7 +153,7 @@ impl<'info> ClaimPayment<'info> {
             )?;
         }
 
-        // 5. Update stats (create-then-update safe)
+        // 6. Update stats (create-then-update safe)
         if self.receiver_stats.user == Pubkey::default() {
             self.receiver_stats.set_inner(UserStats {
                 user: self.freelancer.key(),

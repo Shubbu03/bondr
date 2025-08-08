@@ -33,5 +33,15 @@ pub enum BondrError {
     #[msg("Invalid multisig config")]
     InvalidMultisigConfig,
     #[msg("Duplicate member in multisig")]
-    DuplicateMember
+    DuplicateMember,
+    #[msg("Multisig is already busy")]
+    MultisigBusy,
+    #[msg("Caller is not a member of the multisig group.")]
+    NotMultisigMember,
+    #[msg("This member has already approved.")]
+    AlreadyApproved,
+    #[msg("Pending escrow in multisig does not match this escrow.")]
+    MultisigPendingEscrowMismatch,
+    #[msg("Multisig threshold is not met, can't withdraw amount")]
+    MultisigThresholdNotMet,
 }
