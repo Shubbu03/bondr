@@ -1,4 +1,4 @@
-### Bondr — Escrow + Reputation NFTs on Solana (Anchor)
+## Bondr
 
 Bondr is an Anchor program that implements:
 
