@@ -77,11 +77,6 @@ impl<'info> ApproveMultisigRelease<'info> {
             escrow: self.escrow.key(),
         });
 
-        msg!(
-            "Multisig member {} approved escrow {}",
-            self.member.key(),
-            self.escrow.key()
-        );
         Ok(())
     }
 }
