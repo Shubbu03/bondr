@@ -9,6 +9,8 @@ Bondr is an Anchor program that implements:
 
 Program ID: `CFXd43mg9TDN5cSHgaUm5ahPSTvLTb9hw3XuASCVL4wh`
 
+Devnet link: [Solana Explorer](https://explorer.solana.com/address/CFXd43mg9TDN5cSHgaUm5ahPSTvLTb9hw3XuASCVL4wh?cluster=devnet)
+
 
 ## Features
 
