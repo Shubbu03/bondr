@@ -16,6 +16,8 @@ pub use state::*;
 
 declare_id!("CFXd43mg9TDN5cSHgaUm5ahPSTvLTb9hw3XuASCVL4wh");
 
+// devent explorer link -> https://explorer.solana.com/address/CFXd43mg9TDN5cSHgaUm5ahPSTvLTb9hw3XuASCVL4wh?cluster=devnet
+
 #[program]
 pub mod bondr {
     use super::*;
