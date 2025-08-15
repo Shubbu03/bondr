@@ -14,6 +14,8 @@ url = "https://api.apr.dev"
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/wallet.json"
+# cluster = "devnet"
+# wallet = '/Users/shubbu/DEV/bondr/wallets/client.json'
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
