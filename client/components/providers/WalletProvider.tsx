@@ -34,7 +34,7 @@ export default function SolanaWalletProvider({
 
     return (
         <ConnectionProvider endpoint={rpcEndpoint} config={{ commitment: "processed", httpAgent: false }}>
-            <WalletProvider wallets={wallets} autoConnect>
+            <WalletProvider wallets={wallets}>
                 <WalletModalProvider>{children}</WalletModalProvider>
             </WalletProvider>
         </ConnectionProvider>
