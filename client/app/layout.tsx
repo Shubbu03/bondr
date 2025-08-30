@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
-import SolanaWalletProvider from "@/components/providers/WalletProvider";
+import SolanaWalletProvider from "@/components/providers/wallet-provider";
+import { ThemeProvider } from "@/components//providers/theme-provider"
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,10 +42,17 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SolanaWalletProvider>
-          {children}
-          <Toaster />
-        </SolanaWalletProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <SolanaWalletProvider>
+            {children}
+            <Toaster />
+          </SolanaWalletProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
