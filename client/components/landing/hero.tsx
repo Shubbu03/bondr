@@ -7,12 +7,12 @@ const Hero = () => {
     return (
         <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
             {/* Subtle background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-accent/2"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/3 via-transparent to-accent/2 dark:from-primary/5 dark:to-accent/3"></div>
 
             {/* Floating shapes - more subtle */}
-            <div className="absolute top-32 left-10 w-12 h-12 bg-primary/5 rounded-full animate-float"></div>
-            <div className="absolute top-48 right-16 w-8 h-8 bg-accent/5 rounded-full animate-float" style={{ animationDelay: '2s' }}></div>
-            <div className="absolute bottom-32 left-16 w-6 h-6 bg-primary/3 rounded-full animate-float" style={{ animationDelay: '4s' }}></div>
+            <div className="absolute top-32 left-10 w-12 h-12 bg-primary/5 dark:bg-primary/10 rounded-full animate-float"></div>
+            <div className="absolute top-48 right-16 w-8 h-8 bg-accent/5 dark:bg-accent/10 rounded-full animate-float" style={{ animationDelay: '2s' }}></div>
+            <div className="absolute bottom-32 left-16 w-6 h-6 bg-primary/3 dark:bg-primary/8 rounded-full animate-float" style={{ animationDelay: '4s' }}></div>
 
             <div className="container mx-auto px-6 py-16 text-center relative z-10">
                 <div className="max-w-4xl mx-auto">
@@ -23,14 +23,14 @@ const Hero = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6 }}
                     >
-                        <span className="text-foreground">Trustless Payments.</span>
+                        <span className="text-foreground dark:text-foreground">Trustless Payments.</span>
                         <br />
-                        <span className="text-primary">Seamless Freelancing.</span>
+                        <span className="text-primary dark:text-primary">Seamless Freelancing.</span>
                     </motion.h1>
 
                     {/* Subheading */}
                     <motion.p
-                        className="text-lg md:text-xl text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed"
+                        className="text-lg md:text-xl text-muted-foreground dark:text-muted-foreground mb-12 max-w-2xl mx-auto leading-relaxed"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.2 }}
@@ -62,33 +62,33 @@ const Hero = () => {
                         transition={{ duration: 0.6, delay: 0.6 }}
                     >
                         <motion.div
-                            className="flex flex-col items-center p-8 rounded-2xl bg-card/60 backdrop-blur-sm border border-border/50"
+                            className="flex flex-col items-center p-8 rounded-2xl bg-card/60 dark:bg-card/60 backdrop-blur-sm border border-border/50 dark:border-border/50"
                             whileHover={{ y: -4 }}
                             transition={{ duration: 0.2 }}
                         >
-                            <IconShield className="h-7 w-7 text-primary mb-3" />
-                            <h3 className="text-lg font-semibold text-foreground">Secure Escrow</h3>
-                            <p className="text-muted-foreground text-sm">Funds protected until milestones are met</p>
+                            <IconShield className="h-7 w-7 text-primary dark:text-primary mb-3" />
+                            <h3 className="text-lg font-semibold text-foreground dark:text-foreground">Secure Escrow</h3>
+                            <p className="text-muted-foreground dark:text-muted-foreground text-sm">Funds protected until milestones are met</p>
                         </motion.div>
 
                         <motion.div
-                            className="flex flex-col items-center p-8 rounded-2xl bg-card/60 backdrop-blur-sm border border-border/50"
+                            className="flex flex-col items-center p-8 rounded-2xl bg-card/60 dark:bg-card/60 backdrop-blur-sm border border-border/50 dark:border-border/50"
                             whileHover={{ y: -4 }}
                             transition={{ duration: 0.2 }}
                         >
-                            <IconUsers className="h-7 w-7 text-success mb-3" />
-                            <h3 className="text-lg font-semibold text-foreground">Trusted by 10K+</h3>
-                            <p className="text-muted-foreground text-sm">Freelancers and clients worldwide</p>
+                            <IconUsers className="h-7 w-7 text-success dark:text-success mb-3" />
+                            <h3 className="text-lg font-semibold text-foreground dark:text-foreground">Trusted by 10K+</h3>
+                            <p className="text-muted-foreground dark:text-muted-foreground text-sm">Freelancers and clients worldwide</p>
                         </motion.div>
 
                         <motion.div
-                            className="flex flex-col items-center p-8 rounded-2xl bg-card/60 backdrop-blur-sm border border-border/50"
+                            className="flex flex-col items-center p-8 rounded-2xl bg-card/60 dark:bg-card/60 backdrop-blur-sm border border-border/50 dark:border-border/50"
                             whileHover={{ y: -4 }}
                             transition={{ duration: 0.2 }}
                         >
-                            <IconTrendingUp className="h-7 w-7 text-accent mb-3" />
-                            <h3 className="text-lg font-semibold text-foreground">$50M+ Secured</h3>
-                            <p className="text-muted-foreground text-sm">In transactions processed safely</p>
+                            <IconTrendingUp className="h-7 w-7 text-accent dark:text-accent mb-3" />
+                            <h3 className="text-lg font-semibold text-foreground dark:text-foreground">$50M+ Secured</h3>
+                            <p className="text-muted-foreground dark:text-muted-foreground text-sm">In transactions processed safely</p>
                         </motion.div>
                     </motion.div>
                 </div>

@@ -6,7 +6,7 @@ import TrustSection from "./trust-section";
 
 export default function Landing() {
     return (
-        <div className="min-h-screen">
+        <div className="min-h-screen bg-background dark:bg-background">
             <Navbar />
             <Hero />
             <ProcessFlow />
