@@ -1,5 +1,6 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   /* Brand Colors */
@@ -57,7 +58,8 @@
   --font-mono: var(--font-geist-mono), ui-monospace, "Cascadia Code", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
+/* Dark mode theme variables */
+.dark {
   @theme {
     /* Lighter dark mode with reduced intensity */
     --color-background: oklch(25% 0.03 250);     /* Lighter dark navy base */

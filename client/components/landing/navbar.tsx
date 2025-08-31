@@ -20,8 +20,8 @@ const Navbar = () => {
     return (
         <motion.nav
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
-                ? 'mx-4 mt-4 rounded-full bg-card/90 backdrop-blur-md border shadow-xl'
-                : 'mx-0 mt-0 rounded-none bg-background/90 backdrop-blur-md border-b'
+                ? 'mx-4 mt-4 rounded-full bg-card/90 dark:bg-card/90 backdrop-blur-md border dark:border-border shadow-xl'
+                : 'mx-0 mt-0 rounded-none bg-background/90 dark:bg-background/90 backdrop-blur-md border-b dark:border-border'
                 }`}
             initial={{ y: -100 }}
             animate={{ y: 0 }}
@@ -31,7 +31,7 @@ const Navbar = () => {
                 <div className="flex items-center justify-between">
                     {/* Logo */}
                     <div className="flex items-center">
-                        <h1 className="text-2xl font-bold text-primary">Bondr</h1>
+                        <h1 className="text-2xl font-bold text-primary dark:text-primary">Bondr</h1>
                     </div>
 
                     {/* Right side controls */}
